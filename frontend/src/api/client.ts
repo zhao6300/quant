@@ -58,9 +58,9 @@ export class ApiClient {
       trading_date: string;
     },
   ): Promise<SourceTicker> {
+    const query = new URLSearchParams(payload);
     return this.request<SourceTicker>(
-      `/api/v1/data-sources/${sourceId}/daily-bars`,
-      { method: "POST", body: JSON.stringify(payload) },
+      `/api/v1/data-sources/${sourceId}/quote?${query}`,
     );
   }
 

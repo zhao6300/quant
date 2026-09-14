@@ -41,6 +41,9 @@ def test_console_pages_through_headless_browser() -> None:
 
     )
 
+    if not os.environ.get("MMQP_CHROMIUM_EXECUTABLE_PATH"):
+        pytest.skip("MMQP_CHROMIUM_EXECUTABLE_PATH is not configured")
+
     pytest.importorskip("playwright.sync_api")
 
     from playwright.sync_api import sync_playwright
@@ -69,7 +72,7 @@ def test_console_pages_through_headless_browser() -> None:
 
             raise AssertionError(f"web server did not start (poll_count={poll_count})")
 
-        expected_pages = ["总览", "数据", "因子", "回测", "数据源"]
+        expected_pages = ["总览", "数据", "因子", "回测", "数据源", "行情"]
 
         headings = {
 
@@ -82,6 +85,7 @@ def test_console_pages_through_headless_browser() -> None:
             "回测": ["研究运行"],
 
             "数据源": ["外部数据源"],
+            "行情": ["行情快照"],
 
         }
 
@@ -96,6 +100,7 @@ def test_console_pages_through_headless_browser() -> None:
             "回测": 1,
 
             "数据源": 1,
+            "行情": 1,
 
         }
 
@@ -201,19 +206,31 @@ def test_console_pages_through_headless_browser() -> None:
 
             page.wait_for_timeout(200)
 
-            source_detail_title = page.locator(".source-detail strong").first
+            page.get_by_test_id("source-card").filter(
+                has_text="Yahoo Finance"
+            ).first.click()
+            page.wait_for_selector('[data-testid="quote-source-select"]')
+            assert (
+                page.get_by_role("button", name="行情", exact=True).get_attribute(
+                    "aria-current"
+                )
+                == "page"
+            )
+            assert (
+                page.locator('[data-testid="quote-source-select"]').input_value()
+                == "yahoo-finance"
+            )
+            assert page.locator('[data-testid="quote-symbol"]').input_value() == "600000.SS"
+            page.locator('[data-testid="quote-submit"]').click()
+            page.wait_for_selector('[data-testid="quote-result"]', timeout=30_000)
+            quote_text = page.locator('[data-testid="quote-result"]').inner_text()
+            assert "600000.SS" in quote_text
+            assert "CNY" in quote_text
 
-            page.locator(".source-card").first.click()
-
-            page.wait_for_timeout(200)
-
-            card_title = page.locator(".source-card strong").first
+            nav.get_by_role("button", name="数据源", exact=True).click()
+            page.wait_for_selector("[data-testid='source-card']")
 
             assert page.locator("main.content").inner_text().strip()
-
-            assert source_detail_title.inner_text() != ""
-
-            assert card_title.inner_text() != ""
 
             assert len(page.locator("[data-testid='source-card']").all()) == 19
 

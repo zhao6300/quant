@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from importlib import import_module
+
 from mmqp.adapters.data_connectors.base import DailyBarConnector, FundamentalFactConnector
 from mmqp.adapters.data_connectors.http import HTTPTransport
 from mmqp.adapters.data_connectors.http_sources import rest_daily_bar_connectors
@@ -49,8 +51,18 @@ def daily_bar_connectors(
     baostock: object | None = None,
 ) -> dict[str, DailyBarConnector]:
     connectors = daily_bar_endpoint_connectors(transport)
+    if akshare is None:
+        try:
+            akshare = import_module("akshare")
+        except ImportError:
+            akshare = None
     if akshare is not None:
         connectors[AkShareDailyBarConnector(akshare).provider] = AkShareDailyBarConnector(akshare)
+    if baostock is None:
+        try:
+            baostock = import_module("baostock")
+        except ImportError:
+            baostock = None
     if baostock is not None:
         connectors[BaoStockDailyBarConnector(baostock).provider] = BaoStockDailyBarConnector(baostock)
     return connectors

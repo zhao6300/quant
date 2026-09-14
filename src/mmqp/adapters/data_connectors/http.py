@@ -10,7 +10,14 @@ from mmqp.domain.providers import ProviderCategorizedError
 
 
 def _raw_open(url: str, timeout: float) -> object:
-    return urllib.request.urlopen(url, timeout=timeout)
+    request = urllib.request.Request(
+        url,
+        headers={
+            "Accept": "application/json,text/csv,text/html,*/*",
+            "User-Agent": "Mozilla/5.0 (compatible; MMQP/0.1)",
+        },
+    )
+    return urllib.request.urlopen(request, timeout=timeout)
 
 
 class HTTPTransport:

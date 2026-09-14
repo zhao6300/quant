@@ -463,6 +463,34 @@ input:focus {
   background: rgba(15, 18, 23, 0.025);
   border: 1px solid rgba(0, 0, 0, 0.06);
 }
+.quote-shelf {
+  display: grid;
+  gap: 20px;
+}
+.quote-form {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+  gap: 12px;
+  align-items: end;
+}
+.quote-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(134px, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+.quote-grid dt {
+  color: var(--muted);
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+.quote-grid dd {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 660;
+  letter-spacing: -0.03em;
+  overflow-wrap: anywhere;
+}
 .usage-route {
   display: block;
   color: var(--accent);
@@ -581,6 +609,9 @@ input:focus {
   .run-form {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+  .quote-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
   .rule-grid {
     grid-template-columns: 1fr 1fr;
   }
@@ -603,6 +634,9 @@ input:focus {
   .run-form,
   .rule-grid,
   .source-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .quote-form {
     grid-template-columns: minmax(0, 1fr);
   }
 }

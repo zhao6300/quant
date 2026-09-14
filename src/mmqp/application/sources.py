@@ -21,7 +21,7 @@ class SourceRequestField:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class SourceUsageDefinition:
     endpoint: str
-    method: Literal["POST"]
+    method: Literal["GET", "POST"]
     request_fields: tuple[SourceRequestField, ...]
     required_env: tuple[str, ...] = ()
 
@@ -45,19 +45,26 @@ def source_usage(source: DataSourceDefinition) -> SourceUsageDefinition:
     required_env = _required_env(source.id)
     if source.category == "market":
         return SourceUsageDefinition(
-            endpoint=f"/api/v1/data-sources/{source.id}/daily-bars",
-            method="POST",
+            endpoint=f"/api/v1/data-sources/{source.id}/quote",
+            method="GET",
             request_fields=(
                 SourceRequestField(
-                    name="canonical_asset_id",
-                    label="Canonical Asset ID",
+                    name="market",
+                    label="Market",
                     value_type="string",
                     required=True,
-                    description="Canonical stable identity used inside the platform.",
+                    description="The market identifier used by the platform.",
                 ),
                 SourceRequestField(
-                    name="provider_code",
-                    label="Provider Code",
+                    name="exchange",
+                    label="Exchange",
+                    value_type="string",
+                    required=True,
+                    description="The exchange identifier used by the platform.",
+                ),
+                SourceRequestField(
+                    name="symbol",
+                    label="Symbol",
                     value_type="string",
                     required=True,
                     description="The ticker/code accepted by the connected provider.",

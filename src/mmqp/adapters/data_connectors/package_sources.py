@@ -32,7 +32,6 @@ class _ModuleDailyBarConnector(DailyBarConnector):
         raise NotImplementedError
 
 
-@dataclass(frozen=True, slots=True)
 class AkShareDailyBarConnector(_ModuleDailyBarConnector):
     @property
     def provider(self) -> str:
@@ -56,7 +55,6 @@ class AkShareDailyBarConnector(_ModuleDailyBarConnector):
         raise _invalid_response("missing-date")
 
 
-@dataclass(frozen=True, slots=True)
 class BaoStockDailyBarConnector(_ModuleDailyBarConnector):
     @property
     def provider(self) -> str:

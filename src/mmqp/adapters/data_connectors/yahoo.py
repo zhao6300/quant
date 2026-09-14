@@ -43,8 +43,18 @@ class YahooFinanceDailyBarConnector(DailyBarConnector):
         timestamps = result.get("timestamp")
         if not isinstance(timestamps, list):
             raise _invalid_response("timestamp")
-        date_key = trading_date.isoformat()
-        matches = [index for index, timestamp in enumerate(timestamps) if timestamp == date_key]
+        matches = [
+            index
+            for index, timestamp in enumerate(timestamps)
+            if (
+                isinstance(timestamp, (int, float))
+                and datetime.fromtimestamp(timestamp, UTC).date() == trading_date
+            )
+            or (
+                isinstance(timestamp, str)
+                and timestamp == trading_date.isoformat()
+            )
+        ]
         if len(matches) != 1:
             raise _invalid_response("date")
         index = matches[0]

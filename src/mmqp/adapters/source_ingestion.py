@@ -42,7 +42,7 @@ class SourceDailyBarPreview:
     exchange: str
     canonical_asset_id: str
     provider_code: str
-    observation: NormalizedDailyBar
+    observation: DailyBar
 
 
 class SourceDailyBarIngestionService:

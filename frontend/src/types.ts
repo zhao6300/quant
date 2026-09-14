@@ -26,7 +26,7 @@ export interface DataSource {
   note: string;
   usage: {
     endpoint: string;
-    method: "POST";
+    method: "GET" | "POST";
     request_fields: {
       name: string;
       label: string;
@@ -39,13 +39,20 @@ export interface DataSource {
 }
 
 export type SourceTicker = {
-  id: string;
-  symbol: string;
-  marketId: string;
+  source_id: string;
+  provider_code: string;
+  market: string;
+  exchange: string;
   open: string;
+  high: string;
+  low: string;
   close: string;
   volume: string;
-  time: string;
+  turnover: string;
+  trading_currency: string;
+  trading_date: string;
+  provider: string;
+  provenance_id: string;
 };
 
 export interface AssetIdentity {

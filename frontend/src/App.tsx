@@ -123,6 +123,13 @@ function marketById(id: string): MarketOption {
   return MARKET_OPTIONS.find((option) => option.id === id) ?? MARKET_OPTIONS[0];
 }
 
+function defaultMarketSymbol(id: string): string {
+  const market = marketById(id);
+  if (market.market === "HONG_KONG") return "0700.HK";
+  if (market.market === "UNITED_STATES") return "AAPL";
+  return "600000.SS";
+}
+
 function App() {
   const [socialData, setSocialData] = useState("Loading");
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
@@ -162,10 +169,14 @@ function App() {
   );
   const [runError, setRunError] = useState<string | null>(null);
   const [runSubmitting, setRunSubmitting] = useState(false);
-  const [activeSourceId, setActiveSourceId] = useState<string>("stooq");
-  const [symbol, setSymbol] = useState<string>("");
-  const [quoteDate, setQuoteDate] = useState<string>("");
+  const [activeSourceId, setActiveSourceId] = useState<string>("yahoo-finance");
+  const [symbol, setSymbol] = useState<string>(defaultMarketSymbol("a-share"));
+  const [quoteDate, setQuoteDate] = useState<string>(
+    new Date().toLocaleDateString("en-CA"),
+  );
   const [quote, setQuote] = useState<SourceTicker | null>(null);
+  const [quoteLoading, setQuoteLoading] = useState(false);
+  const [quoteError, setQuoteError] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -176,17 +187,46 @@ function App() {
     NAVIGATION.find((page) => page.id === activePageId) ?? NAVIGATION[0];
   const activeSource =
     sources?.find((source) => source.id === activeSourceId) ?? sources?.[0];
-  const sourceDisplayName = activeSource?.display_name ?? "无";
 
   const setSourceFocus = useCallback(
     (source: DataSource) => {
       setActiveSourceId(source.id);
-      setSymbol("");
+      setSymbol(defaultMarketSymbol(selectedMarketId));
       setQuote(null);
+      setQuoteError(null);
       setActivePageId("quote");
     },
-    [],
+    [selectedMarketId],
   );
+
+  const readSourceQuote = useCallback(async () => {
+    if (!symbol) {
+      setQuoteError("请输入标的代码。");
+      return;
+    }
+    setQuoteLoading(true);
+    try {
+      const quotation = await client.sourceQuote(activeSourceId, {
+        market: activeMarket.market,
+        exchange: activeMarket.exchange,
+        symbol,
+        trading_date: quoteDate,
+      });
+      setQuote(quotation);
+      setQuoteError(null);
+    } catch (error) {
+      setQuote(null);
+      setQuoteError(error instanceof Error ? error.message : "读取行情失败。");
+    } finally {
+      setQuoteLoading(false);
+    }
+  }, [
+    activeSourceId,
+    activeMarket.exchange,
+    activeMarket.market,
+    quoteDate,
+    symbol,
+  ]);
 
   const evaluate = useCallback(async () => {
     const isActive = activeMarket.market === "A_SHARE";
@@ -248,19 +288,6 @@ function App() {
     }
   }, [datasetName, queryField, queryValue]);
 
-  const previewQuote = useCallback(async () => {
-    try {
-      const quotation = await client.sourceQuote(activeSourceId, {
-        market: selectedMarketId,
-        exchange: "",
-        symbol,
-        trading_date: quoteDate,
-      });
-      setQuote(quotation);
-    } catch (error) {
-      console.error(error);
-    }
-  }, [selectedMarketId, symbol, quoteDate, activeSourceId]);
 
   const submitRun = useCallback(async () => {
     if (!runWindowStart || !runWindowEnd) {
@@ -609,12 +636,145 @@ function App() {
           </section>
         )}
 
+        {activePageId === "quote" && (
+          <section className="glass card quote-shelf">
+            <div className="card-head">
+              <h2>行情快照</h2>
+              <p>
+                从已接入的数据源读取单日 OHLCV，实时连接远端数据供给，
+                用于跨市场研究前的行情核对。
+              </p>
+            </div>
+            <form
+              className="quote-form"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void readSourceQuote();
+              }}
+            >
+              <label>
+                数据源
+                <select
+                  data-testid="quote-source-select"
+                  value={activeSourceId}
+                  onChange={(event) => {
+                    const source = sources?.find(
+                      (item) => item.id === event.target.value,
+                    );
+                    if (source) {
+                      setSourceFocus(source);
+                    }
+                  }}
+                >
+                  {sources?.map((source) => (
+                    <option key={source.id} value={source.id}>
+                      {source.display_name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                市场
+                <select
+                  data-testid="quote-market-select"
+                  value={selectedMarketId}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setSelectedMarketId(value);
+                    setSymbol(defaultMarketSymbol(value));
+                    setQuote(null);
+                    setQuoteError(null);
+                  }}
+                >
+                  {MARKET_OPTIONS.map((market) => (
+                    <option key={market.id} value={market.id}>
+                      {market.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                标的代码
+                <input
+                  data-testid="quote-symbol"
+                  type="text"
+                  value={symbol}
+                  onChange={(event) => setSymbol(event.target.value)}
+                  placeholder="600000.SS"
+                />
+              </label>
+              <label>
+                行情日
+                <input
+                  data-testid="quote-date"
+                  type="date"
+                  value={quoteDate}
+                  onChange={(event) => setQuoteDate(event.target.value)}
+                />
+              </label>
+              <button
+                className="primary-button"
+                data-testid="quote-submit"
+                type="submit"
+                disabled={!sources || quoteLoading}
+              >
+                {quoteLoading ? "读取中…" : "读取真实行情"}
+              </button>
+            </form>
+            {quoteError && <pre className="error-banner">{quoteError}</pre>}
+            {quote && (
+              <dl className="quote-grid" data-testid="quote-result">
+                <div>
+                  <dt>标的</dt>
+                  <dd>{quote.provider_code}</dd>
+                </div>
+                <div>
+                  <dt>日期</dt>
+                  <dd>{quote.trading_date}</dd>
+                </div>
+                <div>
+                  <dt>开盘</dt>
+                  <dd>{quote.open}</dd>
+                </div>
+                <div>
+                  <dt>最高</dt>
+                  <dd>{quote.high}</dd>
+                </div>
+                <div>
+                  <dt>最低</dt>
+                  <dd>{quote.low}</dd>
+                </div>
+                <div>
+                  <dt>收盘</dt>
+                  <dd>{quote.close}</dd>
+                </div>
+                <div>
+                  <dt>成交量</dt>
+                  <dd>{quote.volume}</dd>
+                </div>
+                <div>
+                  <dt>成交额</dt>
+                  <dd>{quote.turnover}</dd>
+                </div>
+                <div>
+                  <dt>币种</dt>
+                  <dd>{quote.trading_currency}</dd>
+                </div>
+                <div>
+                  <dt>数据源</dt>
+                  <dd>{quote.provider}</dd>
+                </div>
+              </dl>
+            )}
+          </section>
+        )}
+
         {activePageId === "sources" && (
           <section className="glass card source-shelf">
             <div className="card-head">
               <h2>外部数据源</h2>
               <p>
-                内置数据源目录，包含免费行情、基本面、公告、宏观与交易日历源；当前展示接入规划，尚未执行实际取数。
+                内置 19 个免费/本地研究源目录；点击行情源卡片进入独立行情快照页。
               </p>
               <p className="source-footnote">
                 {sources?.filter(
@@ -642,13 +802,15 @@ function App() {
                 </div>
                 <dl className="detail-grid">
                   <div>
-                    <dt>调用方法</dt>
+                    <dt>报价能力</dt>
                     <dd>
-                      {activeSource.usage.method} {activeSource.usage.endpoint}
+                      {activeSource.category === "market"
+                        ? "单日开盘行情快照"
+                        : "目录与后续摄取能力"}
                     </dd>
                   </div>
                   <div>
-                    <dt>请求字段</dt>
+                    <dt>数据范围</dt>
                     <dd>
                     <ul>
                       {activeSource.usage.request_fields.map((field) => (
@@ -685,7 +847,7 @@ function App() {
                   onKeyDown={(event) => {
                     if (event.key === "Enter" || event.key === " ") {
                       event.preventDefault();
-                      setActiveSourceId(source.id);
+                      setSourceFocus(source);
                     }
                   }}
                   role="button"

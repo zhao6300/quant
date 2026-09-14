@@ -741,10 +741,13 @@ def ingest_source_daily_bar(
     }
 
 
-@app.post("/api/v1/data-sources/{source_id}/quote-preview")
-def preview_source_daily_bar(
+@app.get("/api/v1/data-sources/{source_id}/quote")
+def get_source_quote(
     source_id: str,
-    request: SourceDailyBarRequestModel,
+    market: str,
+    exchange: str,
+    symbol: str,
+    trading_date: date,
     service: Annotated[
         SourceDailyBarIngestionService, Depends(get_source_ingestion_service)
     ],
@@ -752,11 +755,11 @@ def preview_source_daily_bar(
     preview = service.preview(
         SourceDailyBarCommand(
             source_id=source_id,
-            market=request.market,
-            exchange=request.exchange,
-            canonical_asset_id=request.canonical_asset_id,
-            provider_code=request.provider_code,
-            trading_date=request.trading_date,
+            market=market,
+            exchange=exchange,
+            canonical_asset_id=f"ASSET-{source_id}:{symbol}",
+            provider_code=symbol,
+            trading_date=trading_date,
         )
     )
     observation = preview.observation
@@ -764,8 +767,8 @@ def preview_source_daily_bar(
         raise _domain_error(500, "quote preview returned a non-daily-bar observation")
     return {
         "source_id": preview.source_id,
-        "market": request.market.upper(),
-        "exchange": request.exchange.upper(),
+        "market": market.upper(),
+        "exchange": exchange.upper(),
         "canonical_asset_id": preview.canonical_asset_id,
         "provider_code": observation.provider_code,
         "trading_date": observation.trading_date.isoformat(),
