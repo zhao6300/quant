@@ -23,10 +23,11 @@ body {
 
 .app-shell {
   min-height: 100vh;
-  max-width: 1500px;
+  max-width: 1720px;
   margin-inline: auto;
   display: grid;
-  grid-template-columns: 266px 1fr;
+  grid-template-columns: 266px minmax(0, 1fr);
+  gap: 24px;
 }
 
 .sidebar {
@@ -53,16 +54,17 @@ body {
 .brand strong { font-size: 19px; letter-spacing: -0.02em; }
 
 nav { display: flex; flex-direction: column; gap: 5px; }
-nav a { padding: 12px 16px; color: var(--muted); text-decoration: none; border-radius: 15px; font-size: 14.5px; font-weight: 570; }
-nav a.active, nav a:hover { background: rgba(255, 255, 255, 0.72); color: var(--ink); }
+button.nav-item { width: 100%; border: 0; background: transparent; color: var(--muted); text-align: left; font: inherit; padding: 12px 16px; border-radius: 15px; cursor: pointer; font-size: 14.5px; font-weight: 580; }
+button.nav-item:hover, button.nav-item.active { background: rgba(255, 255, 255, 0.72); color: var(--ink); }
 .sidebar-footer { margin-top: auto; padding: 20px; border-top: 1px solid rgba(0, 0, 0, 0.04); color: var(--muted); font-size: 12px; display: flex; align-items: center; gap: 8px; }
 .online-dot { width: 7px; height: 7px; border-radius: 50%; background: #34c759; }
 .offline-dot { width: 7px; height: 7px; height: 7px; border-radius: 50%; background: #ff3b30; }
 
-.content { padding: 32px 32px 32px 4px; }
+.content { padding: 32px; padding-left: 0; }
 header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 30px; }
 .eyebrow { color: var(--muted); margin: 0 0 6px; font-size: 12.5px; font-weight: 640; }
 h1 { margin: 0; font-size: 34px; letter-spacing: -0.035em; font-weight: 780; }
+.header-description { margin: 7px 0 0; color: var(--muted); font-size: 14px; font-weight: 550; }
 h2 { margin: 0; font-size: 19px; letter-spacing: -0.02em; }
 
 .stat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 18px; }
@@ -71,7 +73,7 @@ h2 { margin: 0; font-size: 19px; letter-spacing: -0.02em; }
 .stat-card strong { font-size: 31px; letter-spacing: -0.04em; }
 .stat-card small { color: #73757c; }
 
-.panel-grid { display: grid; grid-template-columns: 0.8fr 1.2fr; gap: 16px; align-items: start; }
+.panel-grid { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: 16px; align-items: start; }
 .card { padding: 25px; border-radius: 26px; }
 .card-head { margin-bottom: 20px; }
 .card-head p { color: var(--muted); font-size: 13px; margin: 5px 0 0; max-width: 430px; }
@@ -92,7 +94,7 @@ input:focus { outline: none; border-color: #9ab8ef; box-shadow: 0 0 0 4px rgba(0
 
 .market-query {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 12px;
   margin-bottom: 20px;
 }
@@ -100,7 +102,7 @@ input:focus { outline: none; border-color: #9ab8ef; box-shadow: 0 0 0 4px rgba(0
 .market-query button { min-height: 46px; margin-top: 26px; }
 .rule-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
   margin-bottom: 16px;
 }
@@ -118,7 +120,7 @@ input:focus { outline: none; border-color: #9ab8ef; box-shadow: 0 0 0 4px rgba(0
 
 .query-form {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr auto;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
   gap: 12px;
   align-items: end;
   margin-bottom: 20px;

@@ -56,6 +56,39 @@ const RUN_FIELD_LABELS: { key: keyof RunVersionFields; label: string }[] = [
   { key: "risk_model_version", label: "风险模型" },
 ];
 
+const NAVIGATION = [
+  {
+    id: "overview",
+    label: "总览",
+    title: "研究总览",
+    subtitle: "Research Control",
+    description: "工作区、数据和运行状态集中处理。",
+  },
+  {
+    id: "data",
+    label: "数据",
+    title: "数据查询",
+    subtitle: "Immutable Snapshots",
+    description: "按快照读取和过滤本地研究数据。",
+  },
+  {
+    id: "factor",
+    label: "因子",
+    title: "多市场日历与规则",
+    subtitle: "Calendar Rules",
+    description: "查询市场语义并评估研究约束。",
+  },
+  {
+    id: "backtest",
+    label: "回测",
+    title: "研究运行",
+    subtitle: "Research Simulation",
+    description: "生成科研模拟回执，不发送真实订单。",
+  },
+] as const;
+
+type NavigationId = (typeof NAVIGATION)[number]["id"];
+
 function marketById(id: string): MarketOption {
   return MARKET_OPTIONS.find((option) => option.id === id) ?? MARKET_OPTIONS[0];
 }
@@ -97,8 +130,10 @@ function App() {
   const [displayName, setDisplayName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [activePageId, setActivePageId] = useState<NavigationId>("overview");
 
   const activeMarket = marketById(selectedMarketId);
+  const activeNavigation = NAVIGATION.find((page) => page.id === activePageId) ?? NAVIGATION[0];
 
   const evaluate = useCallback(async () => {
     const isActive = activeMarket.market === "A_SHARE";
@@ -235,10 +270,17 @@ function App() {
           </div>
         </div>
         <nav>
-          <a className="active" href="#overview">总览</a>
-          <a href="#dataset">数据</a>
-          <a href="#factor">因子</a>
-          <a href="#backtest">回测</a>
+          {NAVIGATION.map((page) => (
+            <button
+              key={page.id}
+              type="button"
+              className={page.id === activePageId ? "nav-item active" : "nav-item"}
+              aria-current={page.id === activePageId ? "page" : undefined}
+              onClick={() => setActivePageId(page.id)}
+            >
+              {page.label}
+            </button>
+          ))}
         </nav>
         <div className="sidebar-footer">
           <span className={socialData.startsWith("Online") ? "online-dot" : "offline-dot"} />
@@ -249,15 +291,16 @@ function App() {
       <main className="content">
         <header>
           <div>
-            <p className="eyebrow">Research Control</p>
-            <h1>研究总览</h1>
+            <p className="eyebrow">{activeNavigation.subtitle}</p>
+            <h1>{activeNavigation.title}</h1>
+            <p className="header-description">{activeNavigation.description}</p>
           </div>
           <button className="ghost-button" onClick={() => void refresh()} disabled={submitting}>
             刷新
           </button>
         </header>
 
-        <section className="stat-row">
+        {activePageId === "overview" && <section className="stat-row">
           <article className="stat-card glass">
             <span>工作区</span>
             <strong>{status?.workspace_count ?? "—"}</strong>
@@ -278,9 +321,9 @@ function App() {
             <strong>{status?.schema_version ?? "—"}</strong>
             <small>{status?.compatible_restore_schema_versions.join(", ") || "—"}</small>
           </article>
-        </section>
+        </section>}
 
-        <div className="panel-grid">
+      {activePageId === "overview" && <div className="panel-grid">
           <section className="glass card">
             <div className="card-head">
               <div>
@@ -302,7 +345,7 @@ function App() {
               </button>
             </div>
             {error && <pre className="error-banner">{error}</pre>}
-          </section>
+    </section>
 
           <section className="glass card">
             <div className="card-head">
@@ -322,10 +365,10 @@ function App() {
                 </div>
               ))}
             </div>
-          </section>
-        </div>
+    </section>
+        </div>}
 
-        <section className="glass card">
+        {activePageId === "data" && <section className="glass card">
           <div className="card-head">
             <h2>数据查询</h2>
             <p>读取本地不可变数据快照，结果按 Canonical_Asset_ID、观察日期和版本排序。</p>
@@ -401,9 +444,9 @@ function App() {
             </div>
           )}
           {queryError && <pre className="error-banner">{queryError}</pre>}
-        </section>
+        </section>}
 
-        <section
+        {activePageId === "backtest" && <section
           id="research-runs"
           className="glass card"
         >
@@ -448,9 +491,9 @@ function App() {
             </div>
           )}
           {runError && <pre className="error-banner">{runError}</pre>}
-        </section>
+        </section>}
 
-        <section
+        {activePageId === "factor" && <section
           id="market-calendars"
           className="glass card market-shelf"
         >
@@ -580,7 +623,7 @@ function App() {
           )}
 
           {marketError && <pre className="error-banner">{marketError}</pre>}
-        </section>
+        </section>}
       </main>
     </div>
   );
