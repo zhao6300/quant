@@ -131,6 +131,35 @@ input:focus { outline: none; border-color: #9ab8ef; box-shadow: 0 0 0 4px rgba(0
 .metric span,
 .metric small { color: var(--muted); font-size: 12px; }
 .metric strong { font-size: 20px; letter-spacing: -0.025em; overflow-wrap: anywhere; }
+.source-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+.source-card {
+  padding: 18px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.62);
+  display: grid;
+  gap: 8px;
+}
+.source-card span {
+  color: var(--muted);
+  font-size: 12px;
+}
+.source-card strong {
+  font-size: 16px;
+  letter-spacing: -0.02em;
+}
+.source-card small {
+  color: var(--muted);
+  line-height: 1.55;
+}
+.source-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
 
 .query-form {
   display: grid;
@@ -215,5 +244,5 @@ input:focus { outline: none; border-color: #9ab8ef; box-shadow: 0 0 0 4px rgba(0
   .app-shell { display: block; }
   .sidebar { height: auto; margin-bottom: 0; }
   .content { padding: 22px; }
-  .panel-grid, .stat-row, .market-query, .query-form, .run-form, .rule-grid { grid-template-columns: minmax(0, 1fr); }
+  .panel-grid, .stat-row, .market-query, .query-form, .run-form, .rule-grid, .source-grid { grid-template-columns: minmax(0, 1fr); }
 }

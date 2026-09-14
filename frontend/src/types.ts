@@ -13,6 +13,18 @@ export interface PlatformStatus {
   compatible_restore_schema_versions: number[];
 }
 
+export interface DataSource {
+  id: string;
+  provider: string;
+  display_name: string;
+  category: "market" | "fundamental" | "corporate_action" | "macro" | "calendar";
+  scope: "A_SHARE" | "HONG_KONG" | "UNITED_STATES" | "GLOBAL";
+  frequency: "daily" | "event" | "reference" | "monthly" | "quarterly";
+  requires_auth: boolean;
+  documentation_url: string;
+  note: string;
+}
+
 export interface AssetIdentity {
   market: string;
   asset_type: string;

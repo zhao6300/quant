@@ -11,6 +11,7 @@ import type {
   TradingCalendarVersion,
   ValuationCalendarVersion,
   Workspace,
+  DataSource,
 } from "./types";
 
 const client = new ApiClient();
@@ -85,6 +86,13 @@ const NAVIGATION = [
     subtitle: "Research Simulation",
     description: "生成科研模拟回执，不发送真实订单。",
   },
+  {
+    id: "sources",
+    label: "数据源",
+    title: "外部数据源",
+    subtitle: "Integrated Sources",
+    description: "接入目录化的免费本地/远端研究源。",
+  },
 ] as const;
 
 type NavigationId = (typeof NAVIGATION)[number]["id"];
@@ -97,6 +105,7 @@ function App() {
   const [socialData, setSocialData] = useState("Loading");
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [status, setStatus] = useState<PlatformStatus | null>(null);
+  const [sources, setSources] = useState<DataSource[] | null>(null);
   const [tradingCalendar, setTradingCalendar] = useState<TradingCalendarVersion | null>(null);
   const [valuationCalendar, setValuationCalendar] = useState<ValuationCalendarVersion | null>(null);
   const [marketRule, setMarketRule] = useState<MarketRuleProfile | null>(null);
@@ -155,9 +164,14 @@ function App() {
 
   const refresh = useCallback(async () => {
     try {
-      const [fetchedStatus, fetchedWorkspaces] = await Promise.all([client.status(), client.workspaces()]);
+      const [fetchedStatus, fetchedWorkspaces, fetchedSources] = await Promise.all([
+        client.status(),
+        client.workspaces(),
+        client.dataSources(),
+      ]);
       setStatus(fetchedStatus);
       setWorkspaces(fetchedWorkspaces);
+      setSources(fetchedSources);
       setSocialData(`Online · v${fetchedStatus.platform_version}`);
       setError(null);
     } catch {
@@ -444,6 +458,30 @@ function App() {
           )}
           {queryError && <pre className="error-banner">{queryError}</pre>}
         </section>}
+
+        {activePageId === "sources" && (
+          <section className="glass card source-shelf">
+            <div className="card-head">
+              <h2>外部数据源</h2>
+              <p>内置数据源目录，包含免费行情、基本面、公告、宏观与交易日历源，可按 provider 逐项接入。</p>
+            </div>
+            <div className="source-grid">
+              {sources?.map((source) => (
+                <article key={source.id} className="source-card glass">
+                  <div>
+                    <span>{source.category}</span>
+                    <strong>{source.display_name}</strong>
+                  </div>
+                  <small>{source.note}</small>
+                  <div className="source-meta">
+                    <span>{source.scope}</span>
+                    <span>{source.requires_auth ? "需授权" : "公开"}</span>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+        )}
 
         {activePageId === "backtest" && <section
           id="research-runs"

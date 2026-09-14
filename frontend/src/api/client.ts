@@ -4,6 +4,7 @@ import type {
   MarketRuleProfile,
   ProviderAssetMapping,
   PlatformStatus,
+  DataSource,
   QueryRequest,
   QueryResult,
   ResearchRunRequest,
@@ -41,6 +42,10 @@ export class ApiClient {
 
   status(): Promise<PlatformStatus> {
     return this.request<PlatformStatus>("/api/v1/status");
+  }
+
+  dataSources(): Promise<DataSource[]> {
+    return this.request<DataSource[]>("/api/v1/data-sources");
   }
 
   workspaces(): Promise<Workspace[]> {

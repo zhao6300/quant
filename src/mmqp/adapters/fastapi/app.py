@@ -37,6 +37,7 @@ from mmqp.application.run_submission import (
     ResearchRunRequest,
     RunSubmissionService,
 )
+from mmqp.application.sources import list_data_sources
 from mmqp.application.workspaces import WorkspaceService
 from mmqp.domain.assets import AssetVersion, ProviderAssetMapping
 from mmqp.domain.calendars import (
@@ -404,6 +405,24 @@ def read_status(
         "schema_version": 1,
         "compatible_restore_schema_versions": [1],
     }
+
+
+@app.get("/api/v1/data-sources")
+def list_sources() -> list[dict[str, Any]]:
+    return [
+        {
+            "id": source.id,
+            "provider": source.provider,
+            "display_name": source.display_name,
+            "category": source.category,
+            "scope": source.scope,
+            "frequency": source.frequency,
+            "requires_auth": source.requires_auth,
+            "documentation_url": source.documentation_url,
+            "note": source.note,
+        }
+        for source in list_data_sources()
+    ]
 
 
 @app.post("/api/v1/workspaces", status_code=201)
