@@ -47,6 +47,22 @@ def test_console_pages_through_headless_browser() -> None:
             page = browser.new_page(viewport={"width": 1512, "height": 982})
             page.goto(web_url, wait_until="domcontentloaded")
             page.wait_for_selector("button.nav-item")
+            layout = page.evaluate(
+                """
+                () => {
+                    const sidebar = document.querySelector('aside.sidebar');
+                    const content = document.querySelector('main.content');
+                    return {
+                        sidebar: {left: Math.round(sidebar.getBoundingClientRect().x), width: Math.round(sidebar.getBoundingClientRect().width)},
+                        content: {left: Math.round(content.getBoundingClientRect().x), width: Math.round(content.getBoundingClientRect().width)},
+                    };
+                }
+                """
+            )
+            assert layout["sidebar"]["left"] == 22
+            assert 200 <= layout["sidebar"]["width"] <= 280
+            assert layout["content"]["left"] >= 280
+            assert layout["content"]["width"] >= 900
             page.screenshot(path="/tmp/mmqp-page-overview.png", full_page=True)
 
             for page_name in expected_pages:
@@ -54,6 +70,7 @@ def test_console_pages_through_headless_browser() -> None:
                 page.wait_for_timeout(100)
                 assert page.get_by_role("button", name=page_name).get_attribute("aria-current") == "page"
                 assert page.locator("main.content").inner_text().strip()
+                assert page.get_by_role("button", name="刷新").is_visible()
                 page.screenshot(path=f"/tmp/mmqp-page-{page_name}.png", full_page=True)
 
             browser.close()

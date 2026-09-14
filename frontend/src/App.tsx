@@ -260,7 +260,6 @@ function App() {
 
   return (
     <div className="app-shell">
-      <div className="aurora" aria-hidden="true" />
       <aside className="sidebar glass">
         <div className="brand">
           <span className="brand-dot" />
@@ -269,7 +268,7 @@ function App() {
             <p>Quant Research</p>
           </div>
         </div>
-        <nav>
+<nav>
           {NAVIGATION.map((page) => (
             <button
               key={page.id}

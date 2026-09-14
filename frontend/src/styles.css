@@ -25,10 +25,24 @@ body {
   min-height: 100vh;
   max-width: 1720px;
   margin-inline: auto;
+  position: relative;
   display: grid;
   grid-template-columns: 266px minmax(0, 1fr);
   gap: 24px;
 }
+
+.aurora {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  min-height: 100vh;
+  pointer-events: none;
+  background: linear-gradient(180deg, #fdfbf8, #f6f8fb);
+  z-index: -1;
+}
+
+.sidebar { grid-area: 1 / 1; }
+.content { grid-area: 1 / 2; }
 
 .sidebar {
   margin: 22px;
