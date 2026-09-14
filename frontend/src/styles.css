@@ -160,6 +160,30 @@ input:focus { outline: none; border-color: #9ab8ef; box-shadow: 0 0 0 4px rgba(0
   justify-content: space-between;
   gap: 12px;
 }
+.source-usage {
+  padding: 10px;
+  border-radius: 13px;
+  background: rgba(15, 18, 23, 0.025);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+.usage-route {
+  display: block;
+  color: var(--accent);
+  font: 11.5px/1.3 ui-monospace, monospace;
+}
+.usage-fields {
+  display: block;
+  color: var(--muted);
+  font-size: 11.5px;
+  line-height: 1.45;
+  margin-top: 4px;
+}
+.usage-env {
+  display: block;
+  color: var(--warn);
+  font-size: 11.5px;
+  margin-top: 4px;
+}
 .source-connected { color: var(--ok); }
 .source-cataloged { color: var(--warn); }
 

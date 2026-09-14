@@ -477,6 +477,19 @@ function App() {
                     <strong>{source.display_name}</strong>
                   </div>
                   <small>{source.note}</small>
+                  <div className="source-usage">
+                    <span className="usage-route">
+                      {source.usage.method} {source.usage.endpoint}
+                    </span>
+                    <span className="usage-fields">
+                      {source.usage.request_fields.map((field) => field.label).join(" · ")}
+                    </span>
+                    {source.usage.required_env.length > 0 && (
+                      <span className="usage-env">
+                        {source.usage.required_env.join(" · ")}
+                      </span>
+                    )}
+                  </div>
                   <div className="source-meta">
                     <span>{source.scope}</span>
                     <span className={source.implementation_status === "connected" ? "source-connected" : "source-cataloged"}>

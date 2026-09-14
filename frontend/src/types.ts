@@ -24,6 +24,18 @@ export interface DataSource {
   requires_auth: boolean;
   documentation_url: string;
   note: string;
+  usage: {
+    endpoint: string;
+    method: "POST";
+    request_fields: {
+      name: string;
+      label: string;
+      value_type: "string" | "integer" | "date";
+      required: boolean;
+      description: string;
+    }[];
+    required_env: string[];
+  };
 }
 
 export interface AssetIdentity {

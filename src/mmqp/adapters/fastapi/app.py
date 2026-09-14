@@ -41,7 +41,7 @@ from mmqp.application.run_submission import (
     ResearchRunRequest,
     RunSubmissionService,
 )
-from mmqp.application.sources import list_data_sources
+from mmqp.application.sources import list_data_sources, source_usage_payload
 from mmqp.application.workspaces import WorkspaceService
 from mmqp.domain.assets import AssetVersion, ProviderAssetMapping
 from mmqp.domain.calendars import (
@@ -445,6 +445,7 @@ def list_sources() -> list[dict[str, Any]]:
             "requires_auth": source.requires_auth,
             "documentation_url": source.documentation_url,
             "note": source.note,
+            "usage": source_usage_payload(source),
         }
         for source in list_data_sources()
     ]

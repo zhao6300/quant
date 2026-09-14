@@ -1,12 +1,29 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal
+from typing import Any, Literal
 
 SourceCategory = Literal["market", "fundamental", "corporate_action", "macro", "calendar"]
 SourceScope = Literal["A_SHARE", "HONG_KONG", "UNITED_STATES", "GLOBAL"]
 SourceFrequency = Literal["daily", "event", "reference", "monthly", "quarterly"]
 ImplementationStatus = Literal["cataloged", "connected"]
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class SourceRequestField:
+    name: str
+    label: str
+    value_type: Literal["string", "integer", "date"]
+    required: bool
+    description: str
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class SourceUsageDefinition:
+    endpoint: str
+    method: Literal["POST"]
+    request_fields: tuple[SourceRequestField, ...]
+    required_env: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -22,6 +39,181 @@ class DataSourceDefinition:
     requires_auth: bool
     documentation_url: str
     note: str = ""
+
+
+def source_usage(source: DataSourceDefinition) -> SourceUsageDefinition:
+    required_env = _required_env(source.id)
+    if source.category == "market":
+        return SourceUsageDefinition(
+            endpoint=f"/api/v1/data-sources/{source.id}/daily-bars",
+            method="POST",
+            request_fields=(
+                SourceRequestField(
+                    name="canonical_asset_id",
+                    label="Canonical Asset ID",
+                    value_type="string",
+                    required=True,
+                    description="Canonical stable identity used inside the platform.",
+                ),
+                SourceRequestField(
+                    name="provider_code",
+                    label="Provider Code",
+                    value_type="string",
+                    required=True,
+                    description="The ticker/code accepted by the connected provider.",
+                ),
+                SourceRequestField(
+                    name="trading_date",
+                    label="Trading Date",
+                    value_type="date",
+                    required=True,
+                    description="The trading day being fetched/ingested.",
+                ),
+            ),
+            required_env=required_env,
+        )
+    if source.category == "macro":
+        return SourceUsageDefinition(
+            endpoint=f"/api/v1/data-sources/{source.id}/facts",
+            method="POST",
+            request_fields=(
+                SourceRequestField(
+                    name="canonical_asset_id",
+                    label="Series ID",
+                    value_type="string",
+                    required=True,
+                    description="Provider-specific canonical/series reference.",
+                ),
+                SourceRequestField(
+                    name="metric_code",
+                    label="Metric Code",
+                    value_type="string",
+                    required=True,
+                    description="Provider-specific metric/series identifier.",
+                ),
+            ),
+            required_env=required_env,
+        )
+    if source.category == "fundamental":
+        return SourceUsageDefinition(
+            endpoint=f"/api/v1/data-sources/{source.id}/facts",
+            method="POST",
+            request_fields=(
+                SourceRequestField(
+                    name="canonical_asset_id",
+                    label="Canonical Asset ID",
+                    value_type="string",
+                    required=True,
+                    description="Canonical stable identity used inside the platform.",
+                ),
+                SourceRequestField(
+                    name="provider_code",
+                    label="Provider Code",
+                    value_type="string",
+                    required=True,
+                    description="The issuer/ticker accepted by the connected provider.",
+                ),
+                SourceRequestField(
+                    name="metric_code",
+                    label="Metric Code",
+                    value_type="string",
+                    required=True,
+                    description="Provider-specific financial metric identifier.",
+                ),
+            ),
+            required_env=required_env,
+        )
+    if source.category == "corporate_action":
+        return SourceUsageDefinition(
+            endpoint=f"/api/v1/data-sources/{source.id}/corporate-actions",
+            method="POST",
+            request_fields=(
+                SourceRequestField(
+                    name="canonical_asset_id",
+                    label="Canonical Asset ID",
+                    value_type="string",
+                    required=True,
+                    description="Canonical stable identity used inside the platform.",
+                ),
+                SourceRequestField(
+                    name="provider_code",
+                    label="Provider Code",
+                    value_type="string",
+                    required=True,
+                    description="The listed code accepted by the source.",
+                ),
+                SourceRequestField(
+                    name="posting_date",
+                    label="Posting Date",
+                    value_type="date",
+                    required=True,
+                    description="The disclosure/announcement date.",
+                ),
+            ),
+        )
+    return SourceUsageDefinition(
+        endpoint=f"/api/v1/data-sources/{source.id}/calendar",
+        method="POST",
+        request_fields=(
+            SourceRequestField(
+                name="calendar_code",
+                label="Calendar Code",
+                value_type="string",
+                required=True,
+                description="The provider-specific calendar identifier.",
+            ),
+            SourceRequestField(
+                name="start_date",
+                label="Start Date",
+                value_type="date",
+                required=True,
+                description="Inclusive window start.",
+            ),
+            SourceRequestField(
+                name="end_date",
+                label="End Date",
+                value_type="date",
+                required=True,
+                description="Inclusive window end.",
+            ),
+        ),
+    )
+
+
+def source_usage_payload(source: DataSourceDefinition) -> dict[str, Any]:
+    usage = source_usage(source)
+    return {
+        "endpoint": usage.endpoint,
+        "method": usage.method,
+        "request_fields": [
+            {
+                "name": field.name,
+                "label": field.label,
+                "value_type": field.value_type,
+                "required": field.required,
+                "description": field.description,
+            }
+            for field in usage.request_fields
+        ],
+        "required_env": usage.required_env,
+    }
+
+
+def _required_env(source_id: str) -> tuple[str, ...]:
+    mapping = {
+        "tushare": ("TUSHARE_API_TOKEN",),
+        "alpha-vantage": ("ALPHA_VANTAGE_API_KEY",),
+        "financial-modeling-prep": ("FINANCIAL_MODELING_PREP_API_KEY",),
+        "finnhub": ("FINNHUB_API_KEY",),
+        "tiingo": ("TIINGO_API_KEY",),
+        "polygon-io": ("POLYGON_API_KEY",),
+        "sec-edgar": (),
+        "fred": ("FRED_API_KEY",),
+        "iex-cloud": ("IEX_CLOUD_API_TOKEN",),
+        "twelve-data": ("TWELVE_DATA_API_KEY",),
+        "nasdaq-data-link": ("NASDAQ_DATA_LINK_API_KEY",),
+    }
+    return mapping.get(source_id, ())
 
 
 DATA_SOURCES: tuple[DataSourceDefinition, ...] = (

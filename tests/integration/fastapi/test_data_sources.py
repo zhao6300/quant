@@ -59,3 +59,10 @@ def test_data_sources_endpoint_returns_the_catalog() -> None:
     assert {
         source["id"]: source["source_id"] for source in payload if source["id"] in {"stooq", "yahoo-finance"}
     } == {"stooq": "stooq", "yahoo-finance": "yahoo-finance"}
+    source_by_id = {source["id"]: source for source in payload}
+    for source_id, source in source_by_id.items():
+        usage = source["usage"]
+        assert usage["method"] == "POST"
+        assert usage["endpoint"].startswith(f"/api/v1/data-sources/{source_id}/")
+        assert usage["request_fields"]
+        assert all(field["required"] for field in usage["request_fields"])
