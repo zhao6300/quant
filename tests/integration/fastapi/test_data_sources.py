@@ -66,3 +66,5 @@ def test_data_sources_endpoint_returns_the_catalog() -> None:
         assert usage["endpoint"].startswith(f"/api/v1/data-sources/{source_id}/")
         assert usage["request_fields"]
         assert all(field["required"] for field in usage["request_fields"])
+        if source["requires_auth"]:
+            assert usage["required_env"]
