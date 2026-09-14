@@ -771,6 +771,12 @@ select:focus {
   font-size: 22px;
   letter-spacing: -0.025em;
 }
+.quote-empty.failed {
+  border-color: rgba(255, 59, 48, 0.38);
+}
+.quote-empty.failed strong {
+  color: #ff9c96;
+}
 .quote-empty p {
   max-width: 520px;
   color: rgba(222, 234, 255, 0.66);

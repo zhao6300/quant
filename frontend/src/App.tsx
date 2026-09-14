@@ -212,6 +212,8 @@ function App() {
       setQuoteError("请输入标的代码。");
       return;
     }
+    setQuote(null);
+    setQuoteError(null);
     setQuoteLoading(true);
     try {
       const quotation = await client.sourceQuote(activeSourceId, {
@@ -776,9 +778,11 @@ function App() {
                   <select
                     data-testid="quote-market-select"
                     value={selectedMarketId}
-                    onChange={(event) => {
-                      const value = event.target.value;
-                      setSelectedMarketId(value);
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setQuote(null);
+                    setQuoteError(null);
+                    setSelectedMarketId(value);
                       setSymbol(defaultMarketSymbol(value));
                       setQuote(null);
                       setQuoteError(null);
