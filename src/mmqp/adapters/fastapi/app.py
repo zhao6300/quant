@@ -6,9 +6,10 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Annotated, Any, Literal
 
-from fastapi import Depends, FastAPI, Request
+from fastapi import Depends, FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from mmqp import PLATFORM_VERSION
@@ -62,6 +63,8 @@ from mmqp.ports.calendars import TradingCalendarRepository, ValuationCalendarRep
 from mmqp.ports.market_rules import MarketRuleRepository
 from mmqp.ports.workspace_repository import WorkspaceRepository
 
+frontend_dist = Path(__file__).resolve().parents[4] / "frontend" / "dist"
+
 app = FastAPI(title="Multi-Market Quant Platform", version=PLATFORM_VERSION)
 app.add_middleware(
     CORSMiddleware,
@@ -69,6 +72,21 @@ app.add_middleware(
     allow_methods=["GET", "POST"],
     allow_headers=["Content-Type"],
 )
+
+app.mount("/assets", StaticFiles(directory=frontend_dist / "assets", check_dir=False), name="assets")
+
+
+@app.get("/", include_in_schema=False)
+def read_frontend() -> Response:
+    index_html = frontend_dist / "index.html"
+    if index_html.is_file():
+        return FileResponse(index_html)
+    return HTMLResponse(
+        """<!doctype html><html lang="en"><head><meta charset="utf-8">"""
+        """<title>MMQP</title></head><body>"""
+        """<h1>MMQP</h1><p>Run ./scripts/install.sh to build the web console.</p>"""
+        """</body></html>"""
+    )
 
 
 @app.exception_handler(DomainError)

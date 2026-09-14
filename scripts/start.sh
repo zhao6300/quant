@@ -17,11 +17,10 @@ usage() {
 Usage: ./scripts/start.sh [options]
 
 Options:
-  --foreground       Run backend and frontend in the foreground.
-  --background       Run both processes detached with logs in /tmp.
-  --host HOST        Backend bind host.   [default: 0.0.0.0]
-  --port PORT        Backend bind port.   [default: 80]
-  --frontend-port    Frontend bind port.  [default: 5173]
+  --foreground       Run the platform in the foreground.
+  --background       Run the platform detached with logs in /tmp.
+  --host HOST        Platform bind host.  [default: 0.0.0.0]
+  --port PORT        Platform bind port.  [default: 80]
   --help             Show this help.
 EOF
 }
@@ -29,7 +28,6 @@ EOF
 mode=foreground
 backend_host=0.0.0.0
 backend_port=80
-frontend_port=5173
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -49,10 +47,6 @@ while [[ $# -gt 0 ]]; do
       backend_port="${2:-}"
       shift 2
       ;;
-    --frontend-port)
-      frontend_port="${2:-}"
-      shift 2
-      ;;
     --help|-h)
       usage
       exit 0
@@ -65,7 +59,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ -z "$backend_host" || -z "$backend_port" || -z "$frontend_port" ]]; then
+if [[ -z "$backend_host" || -z "$backend_port" ]]; then
   echo "missing host or port" >&2
   usage >&2
   exit 2
@@ -73,21 +67,18 @@ fi
 
 require_installation
 
+if [[ ! -f "frontend/dist/index.html" ]]; then
+  echo "frontend build is missing; run: ./scripts/install.sh" >&2
+  exit 1
+fi
+
 if [[ "$mode" == "background" ]]; then
-  backend_log=""
-  frontend_log=""
+  backend_log="/tmp/mmqp-${backend_port}.log"
   nohup .venv/bin/uvicorn mmqp.adapters.fastapi.app:app --host "$backend_host" --port "$backend_port" >"$backend_log" 2>&1 &
   backend_pid=$!
-  (
-    cd frontend
-    nohup npm run dev -- --host --port "$frontend_port" >"$frontend_log" 2>&1
-  ) &
-  frontend_pid=$!
 
-  echo "backend pid: $backend_pid [log: $backend_log]"
-  echo "frontend pid: $frontend_pid [log: $frontend_log]"
-  echo "backend: http://$backend_host:$backend_port"
-  echo "frontend: http://127.0.0.1:$frontend_port"
+  echo "platform pid: $backend_pid [log: $backend_log]"
+  echo "platform: http://127.0.0.1:$backend_port"
   exit 0
 fi
 
@@ -105,12 +96,5 @@ trap cleanup EXIT
 .venv/bin/uvicorn mmqp.adapters.fastapi.app:app --host "$backend_host" --port "$backend_port" &
 BACKEND_PID=$!
 
-(
-  cd frontend
-  npm run dev -- --host --port "$frontend_port"
-) &
-FRONTEND_PID=$!
-
-echo "backend: http://$backend_host:$backend_port"
-echo "frontend: http://127.0.0.1:$frontend_port"
+echo "platform: http://127.0.0.1:$backend_port"
 wait
