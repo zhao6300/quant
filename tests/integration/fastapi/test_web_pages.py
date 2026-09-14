@@ -1,3 +1,4 @@
+import os
 import subprocess
 import time
 import urllib.request
@@ -42,8 +43,17 @@ def test_console_pages_through_headless_browser() -> None:
             raise AssertionError(f"web server did not start (poll_count={poll_count})")
 
         expected_pages = ["总览", "数据", "因子", "回测"]
+        headings = {
+            "总览": ["研究总览", "新建工作区", "已注册工作区"],
+            "数据": ["数据查询", "数据查询"],
+            "因子": ["多市场日历与规则", "多市场日历与规则"],
+            "回测": ["研究运行", "研究运行"],
+        }
         with sync_playwright() as playwright:
-            browser = playwright.chromium.launch(headless=True)
+            browser = playwright.chromium.launch(
+                headless=True,
+                executable_path=os.environ.get("MMQP_CHROMIUM_EXECUTABLE_PATH") or None,
+            )
             page = browser.new_page(viewport={"width": 1512, "height": 982})
             page.goto(web_url, wait_until="domcontentloaded")
             page.wait_for_selector("button.nav-item")
@@ -68,8 +78,24 @@ def test_console_pages_through_headless_browser() -> None:
             for page_name in expected_pages:
                 page.get_by_role("button", name=page_name).click()
                 page.wait_for_timeout(100)
-                assert page.get_by_role("button", name=page_name).get_attribute("aria-current") == "page"
+                expected_headings = headings[page_name]
+                unexpected_headings = {
+                    heading
+                    for page_headings in headings.values()
+                    for heading in page_headings
+                } - set(expected_headings)
+                assert (
+                    page.get_by_role("button", name=page_name).get_attribute(
+                        "aria-current"
+                    )
+                    == "page"
+                )
                 assert page.locator("main.content").inner_text().strip()
+                assert page.locator("main h1").inner_text() == expected_headings[0]
+                assert page.locator("main h2").count() == len(expected_headings) - 1
+                assert page.get_by_role("contentinfo").count() == 0
+                for heading in unexpected_headings:
+                    assert page.get_by_role("heading", name=heading).count() == 0
                 assert page.get_by_role("button", name="刷新").is_visible()
                 page.screenshot(path=f"/tmp/mmqp-page-{page_name}.png", full_page=True)
 

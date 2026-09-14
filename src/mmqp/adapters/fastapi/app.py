@@ -80,7 +80,7 @@ app.mount("/assets", StaticFiles(directory=frontend_dist / "assets", check_dir=F
 def read_frontend() -> Response:
     index_html = frontend_dist / "index.html"
     if index_html.is_file():
-        return FileResponse(index_html)
+        return FileResponse(index_html, headers={"Cache-Control": "no-store"})
     return HTMLResponse(
         """<!doctype html><html lang="en"><head><meta charset="utf-8">"""
         """<title>MMQP</title></head><body>"""
