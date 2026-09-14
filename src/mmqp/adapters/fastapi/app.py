@@ -417,6 +417,7 @@ def list_sources() -> list[dict[str, Any]]:
             "category": source.category,
             "scope": source.scope,
             "frequency": source.frequency,
+            "implementation_status": source.implementation_status,
             "requires_auth": source.requires_auth,
             "documentation_url": source.documentation_url,
             "note": source.note,

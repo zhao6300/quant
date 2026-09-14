@@ -20,6 +20,7 @@ export interface DataSource {
   category: "market" | "fundamental" | "corporate_action" | "macro" | "calendar";
   scope: "A_SHARE" | "HONG_KONG" | "UNITED_STATES" | "GLOBAL";
   frequency: "daily" | "event" | "reference" | "monthly" | "quarterly";
+  implementation_status: "cataloged" | "connected";
   requires_auth: boolean;
   documentation_url: string;
   note: string;

@@ -6,6 +6,7 @@ from typing import Literal
 SourceCategory = Literal["market", "fundamental", "corporate_action", "macro", "calendar"]
 SourceScope = Literal["A_SHARE", "HONG_KONG", "UNITED_STATES", "GLOBAL"]
 SourceFrequency = Literal["daily", "event", "reference", "monthly", "quarterly"]
+ImplementationStatus = Literal["cataloged", "connected"]
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -16,6 +17,7 @@ class DataSourceDefinition:
     category: SourceCategory
     scope: SourceScope
     frequency: SourceFrequency
+    implementation_status: ImplementationStatus = "cataloged"
     requires_auth: bool
     documentation_url: str
     note: str = ""

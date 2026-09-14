@@ -160,6 +160,8 @@ input:focus { outline: none; border-color: #9ab8ef; box-shadow: 0 0 0 4px rgba(0
   justify-content: space-between;
   gap: 12px;
 }
+.source-connected { color: var(--ok); }
+.source-cataloged { color: var(--warn); }
 
 .query-form {
   display: grid;

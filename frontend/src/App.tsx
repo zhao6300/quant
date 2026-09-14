@@ -463,7 +463,7 @@ function App() {
           <section className="glass card source-shelf">
             <div className="card-head">
               <h2>外部数据源</h2>
-              <p>内置数据源目录，包含免费行情、基本面、公告、宏观与交易日历源，可按 provider 逐项接入。</p>
+              <p>内置数据源目录，包含免费行情、基本面、公告、宏观与交易日历源；当前展示接入规划，尚未执行实际取数。</p>
             </div>
             <div className="source-grid">
               {sources?.map((source) => (
@@ -475,6 +475,9 @@ function App() {
                   <small>{source.note}</small>
                   <div className="source-meta">
                     <span>{source.scope}</span>
+                    <span className={source.implementation_status === "connected" ? "source-connected" : "source-cataloged"}>
+                      {source.implementation_status === "connected" ? "已接入" : "未接入"}
+                    </span>
                     <span>{source.requires_auth ? "需授权" : "公开"}</span>
                   </div>
                 </article>
