@@ -89,7 +89,7 @@ class SqliteTradingCalendarRepository:
             if exchange is not None:
                 predicates.append("exchange = ?")
                 values.append(exchange)
-            predicate = " AND ".join(predicates)
+            predicate = "WHERE " + " AND ".join(predicates) if predicates else ""
             rows = connection.execute(
                 f"SELECT * FROM trading_calendar_versions {predicate} ORDER BY effective_from, version_id",
                 values,

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Generator
+from collections.abc import AsyncIterator, Callable, Generator
+from contextlib import asynccontextmanager
 from datetime import date, datetime
 from decimal import Decimal
 from pathlib import Path
@@ -14,6 +15,7 @@ from pydantic import BaseModel, Field
 
 from mmqp import PLATFORM_VERSION
 from mmqp.adapters.sqlite.asset_repository import SqliteAssetRegistryRepository
+from mmqp.adapters.sqlite.baselines import seed_market_baseline
 from mmqp.adapters.sqlite.calendars import (
     SqliteTradingCalendarRepository,
     SqliteValuationCalendarRepository,
@@ -64,8 +66,19 @@ from mmqp.ports.market_rules import MarketRuleRepository
 from mmqp.ports.workspace_repository import WorkspaceRepository
 
 frontend_dist = Path(__file__).resolve().parents[4] / "frontend" / "dist"
+control_database_path = Path("/tmp/mmqp-platform-control.sqlite3")
 
-app = FastAPI(title="Multi-Market Quant Platform", version=PLATFORM_VERSION)
+@asynccontextmanager
+async def platform_lifespan(_: FastAPI) -> AsyncIterator[None]:
+    seed_market_baseline(control_database_path)
+    yield
+
+
+app = FastAPI(
+    title="Multi-Market Quant Platform",
+    version=PLATFORM_VERSION,
+    lifespan=platform_lifespan,
+)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
@@ -239,7 +252,7 @@ class ResearchRunRequestModel(BaseModel):
 
 
 def get_trading_calendar_repository() -> Generator[TradingCalendarRepository]:
-    database = Path("/tmp/mmqp-platform-control.sqlite3")
+    database = control_database_path
     trading_repository = SqliteTradingCalendarRepository(database)
     try:
         yield trading_repository
@@ -248,7 +261,7 @@ def get_trading_calendar_repository() -> Generator[TradingCalendarRepository]:
 
 
 def get_valuation_calendar_repository() -> Generator[ValuationCalendarRepository]:
-    database = Path("/tmp/mmqp-platform-control.sqlite3")
+    database = control_database_path
     valuation_repository = SqliteValuationCalendarRepository(database)
     try:
         yield valuation_repository
@@ -257,7 +270,7 @@ def get_valuation_calendar_repository() -> Generator[ValuationCalendarRepository
 
 
 def get_market_rule_repository() -> Generator[MarketRuleRepository]:
-    database = Path("/tmp/mmqp-platform-control.sqlite3")
+    database = control_database_path
     repository = SqliteMarketRuleRepository(database)
     try:
         yield repository
