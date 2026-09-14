@@ -100,7 +100,7 @@ def test_console_pages_through_headless_browser() -> None:
             "回测": 1,
 
             "数据源": 1,
-            "行情": 1,
+            "行情": 0,
 
         }
 
@@ -210,6 +210,7 @@ def test_console_pages_through_headless_browser() -> None:
                 has_text="Yahoo Finance"
             ).first.click()
             page.wait_for_selector('[data-testid="quote-source-select"]')
+            page.wait_for_selector('.quote-workspace')
             assert (
                 page.get_by_role("button", name="行情", exact=True).get_attribute(
                     "aria-current"
@@ -224,7 +225,10 @@ def test_console_pages_through_headless_browser() -> None:
             page.locator('[data-testid="quote-submit"]').click()
             page.wait_for_selector('[data-testid="quote-result"]', timeout=30_000)
             quote_text = page.locator('[data-testid="quote-result"]').inner_text()
-            assert "600000.SS" in quote_text
+            assert (
+                "600000.SS"
+                in page.locator(".quote-stage-head").inner_text()
+            )
             assert "CNY" in quote_text
 
             nav.get_by_role("button", name="数据源", exact=True).click()

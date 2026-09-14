@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiClient } from "./api/client";
 import type {
   EvaluatedTrade,
@@ -130,6 +130,13 @@ function defaultMarketSymbol(id: string): string {
   return "600000.SS";
 }
 
+function quoteNumber(value: string): string {
+  const numeric = Number(value);
+  return Number.isFinite(numeric)
+    ? numeric.toLocaleString("en-US", { maximumFractionDigits: 6 })
+    : value;
+}
+
 function App() {
   const [socialData, setSocialData] = useState("Loading");
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
@@ -187,6 +194,7 @@ function App() {
     NAVIGATION.find((page) => page.id === activePageId) ?? NAVIGATION[0];
   const activeSource =
     sources?.find((source) => source.id === activeSourceId) ?? sources?.[0];
+  const autoQuoteKeyRef = useRef("");
 
   const setSourceFocus = useCallback(
     (source: DataSource) => {
@@ -225,6 +233,30 @@ function App() {
     activeMarket.exchange,
     activeMarket.market,
     quoteDate,
+    symbol,
+  ]);
+
+  useEffect(() => {
+    if (activePageId !== "quote" || quoteLoading || quote) return;
+    if (activeSource?.category !== "market") return;
+    const requestKey = [
+      activeSourceId,
+      selectedMarketId,
+      symbol,
+      quoteDate,
+    ].join("|");
+    if (autoQuoteKeyRef.current === requestKey) return;
+    autoQuoteKeyRef.current = requestKey;
+    void readSourceQuote();
+  }, [
+    activePageId,
+    activeSource?.category,
+    activeSourceId,
+    quote,
+    quoteDate,
+    quoteLoading,
+    readSourceQuote,
+    selectedMarketId,
     symbol,
   ]);
 
@@ -637,136 +669,163 @@ function App() {
         )}
 
         {activePageId === "quote" && (
-          <section className="glass card quote-shelf">
-            <div className="card-head">
-              <h2>行情快照</h2>
-              <p>
-                从已接入的数据源读取单日 OHLCV，实时连接远端数据供给，
-                用于跨市场研究前的行情核对。
-              </p>
-            </div>
-            <form
-              className="quote-form"
-              onSubmit={(event) => {
-                event.preventDefault();
-                void readSourceQuote();
-              }}
-            >
-              <label>
-                数据源
-                <select
-                  data-testid="quote-source-select"
-                  value={activeSourceId}
-                  onChange={(event) => {
-                    const source = sources?.find(
-                      (item) => item.id === event.target.value,
-                    );
-                    if (source) {
-                      setSourceFocus(source);
-                    }
-                  }}
-                >
-                  {sources?.map((source) => (
-                    <option key={source.id} value={source.id}>
-                      {source.display_name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                市场
-                <select
-                  data-testid="quote-market-select"
-                  value={selectedMarketId}
-                  onChange={(event) => {
-                    const value = event.target.value;
-                    setSelectedMarketId(value);
-                    setSymbol(defaultMarketSymbol(value));
-                    setQuote(null);
-                    setQuoteError(null);
-                  }}
-                >
-                  {MARKET_OPTIONS.map((market) => (
-                    <option key={market.id} value={market.id}>
-                      {market.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                标的代码
-                <input
-                  data-testid="quote-symbol"
-                  type="text"
-                  value={symbol}
-                  onChange={(event) => setSymbol(event.target.value)}
-                  placeholder="600000.SS"
-                />
-              </label>
-              <label>
-                行情日
-                <input
-                  data-testid="quote-date"
-                  type="date"
-                  value={quoteDate}
-                  onChange={(event) => setQuoteDate(event.target.value)}
-                />
-              </label>
-              <button
-                className="primary-button"
-                data-testid="quote-submit"
-                type="submit"
-                disabled={!sources || quoteLoading}
+          <div className="quote-workspace">
+            <aside className="quote-commands glass">
+              <div className="quote-command-head">
+                <strong>行情终端</strong>
+                <small>选中数据源后自动读取真实日线</small>
+              </div>
+              <form
+                className="quote-control"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void readSourceQuote();
+                }}
               >
-                {quoteLoading ? "读取中…" : "读取真实行情"}
-              </button>
-            </form>
-            {quoteError && <pre className="error-banner">{quoteError}</pre>}
-            {quote && (
-              <dl className="quote-grid" data-testid="quote-result">
+                <label>
+                  数据源
+                  <select
+                    data-testid="quote-source-select"
+                    value={activeSourceId}
+                    onChange={(event) => {
+                      const source = sources?.find(
+                        (item) => item.id === event.target.value,
+                      );
+                      if (source) {
+                        setSourceFocus(source);
+                      }
+                    }}
+                  >
+                    {sources?.map((source) => (
+                      <option key={source.id} value={source.id}>
+                        {source.display_name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  市场
+                  <select
+                    data-testid="quote-market-select"
+                    value={selectedMarketId}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      setSelectedMarketId(value);
+                      setSymbol(defaultMarketSymbol(value));
+                      setQuote(null);
+                      setQuoteError(null);
+                    }}
+                  >
+                    {MARKET_OPTIONS.map((market) => (
+                      <option key={market.id} value={market.id}>
+                        {market.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  标的代码
+                  <input
+                    data-testid="quote-symbol"
+                    type="text"
+                    value={symbol}
+                    onChange={(event) => setSymbol(event.target.value)}
+                    placeholder="600000.SS"
+                  />
+                </label>
+                <label>
+                  行情日
+                  <input
+                    data-testid="quote-date"
+                    type="date"
+                    value={quoteDate}
+                    onChange={(event) => setQuoteDate(event.target.value)}
+                  />
+                </label>
+                <button
+                  className="primary-button"
+                  data-testid="quote-submit"
+                  type="submit"
+                  disabled={!sources || quoteLoading}
+                >
+                  {quoteLoading ? "读取中…" : "重新读取"}
+                </button>
+              </form>
+              <div className="quote-provider">
+                <span>当前供给</span>
+                <strong>{activeSource?.display_name ?? "—"}</strong>
+                {activeSource && <small>{activeSource.note}</small>}
+              </div>
+            </aside>
+            <section className="quote-stage glass">
+              <div className="quote-stage-head">
                 <div>
-                  <dt>标的</dt>
-                  <dd>{quote.provider_code}</dd>
+                  <span>{activeMarket.label} · {activeMarket.exchange}</span>
+                  <strong>{symbol}</strong>
                 </div>
-                <div>
-                  <dt>日期</dt>
-                  <dd>{quote.trading_date}</dd>
+                <div className="quote-state">
+                  {quoteLoading ? "连接中" : quote ? "已加载" : "等待连接"}
                 </div>
-                <div>
-                  <dt>开盘</dt>
-                  <dd>{quote.open}</dd>
+              </div>
+              {quoteError && <pre className="error-banner">{quoteError}</pre>}
+              {quote ? (
+                <div className="quote-stage-body" data-testid="quote-result">
+                  <div className="quote-hero">
+                    <div>
+                      <span>{quote.trading_date} 收盘价</span>
+                      <strong>{quoteNumber(quote.close)}</strong>
+                      <small>{quote.trading_currency}</small>
+                    </div>
+                    <div>
+                      <span>开盘变动</span>
+                      <strong>
+                        {(
+                          ((Number(quote.close) - Number(quote.open)) /
+                            Number(quote.open)) *
+                          100
+                        ).toFixed(2)}
+                        %
+                      </strong>
+                      <small>{quote.provider}</small>
+                    </div>
+                  </div>
+                  <dl className="quote-metrics">
+                    <div>
+                      <dt>开盘</dt>
+                      <dd>{quoteNumber(quote.open)}</dd>
+                    </div>
+                    <div>
+                      <dt>最高</dt>
+                      <dd>{quoteNumber(quote.high)}</dd>
+                    </div>
+                    <div>
+                      <dt>最低</dt>
+                      <dd>{quoteNumber(quote.low)}</dd>
+                    </div>
+                    <div>
+                      <dt>成交量</dt>
+                      <dd>{quoteNumber(quote.volume)}</dd>
+                    </div>
+                    <div>
+                      <dt>成交额</dt>
+                      <dd>{quoteNumber(quote.turnover)}</dd>
+                    </div>
+                    <div>
+                      <dt>数据源</dt>
+                      <dd>{quote.provider}</dd>
+                    </div>
+                  </dl>
                 </div>
-                <div>
-                  <dt>最高</dt>
-                  <dd>{quote.high}</dd>
+              ) : (
+                <div className="quote-empty">
+                  <strong>{quoteLoading ? "正在连接数据源" : "等待真实行情"}</strong>
+                  <p>
+                    点击数据源卡片后，这里会直接加载所选供给的单日 OHLCV，不需要手动提交 POST。
+                  </p>
                 </div>
-                <div>
-                  <dt>最低</dt>
-                  <dd>{quote.low}</dd>
-                </div>
-                <div>
-                  <dt>收盘</dt>
-                  <dd>{quote.close}</dd>
-                </div>
-                <div>
-                  <dt>成交量</dt>
-                  <dd>{quote.volume}</dd>
-                </div>
-                <div>
-                  <dt>成交额</dt>
-                  <dd>{quote.turnover}</dd>
-                </div>
-                <div>
-                  <dt>币种</dt>
-                  <dd>{quote.trading_currency}</dd>
-                </div>
-                <div>
-                  <dt>数据源</dt>
-                  <dd>{quote.provider}</dd>
-                </div>
-              </dl>
-            )}
-          </section>
+              )}
+            </section>
+          </div>
         )}
 
         {activePageId === "sources" && (
