@@ -57,7 +57,7 @@ def test_data_sources_endpoint_returns_the_catalog() -> None:
         source["id"]: source["implementation_status"]
         for source in payload
         if source["implementation_status"] == "connected"
-    } == {"stooq": "connected", "yahoo-finance": "connected"}
+    } == {"stooq": "connected", "yahoo-finance": "connected", "sec-edgar": "connected"}
     assert {
         source["id"]: source["source_id"]
         for source in payload

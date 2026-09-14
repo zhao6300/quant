@@ -4,12 +4,15 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import date
 
-from mmqp.adapters.data_connectors.base import DailyBarConnector, NormalizedDailyBar
+from mmqp.adapters.data_connectors.base import (
+    DailyBarConnector,
+    FundamentalFactConnector,
+    NormalizedDailyBar,
+    NormalizedFundamentalFact,
+)
 from mmqp.application.ingestion import DataIngestionService
 from mmqp.domain.ingestion import DailyBar, DataVersion
 from mmqp.domain.providers import ProviderCategorizedError
-
-CONNECTED_DAILY_BAR_SOURCES: tuple[str, ...] = ("stooq", "yahoo-finance")
 
 
 @dataclass(frozen=True, slots=True)
@@ -33,7 +36,11 @@ class DailyBarSourceIngest:
 
 
 class SourceDailyBarIngestionService:
-    def __init__(self, connectors: Mapping[str, DailyBarConnector], ingestion: DataIngestionService) -> None:
+    def __init__(
+        self,
+        connectors: Mapping[str, DailyBarConnector],
+        ingestion: DataIngestionService,
+    ) -> None:
         self._connectors = dict(connectors)
         self._ingestion = ingestion
 
@@ -83,3 +90,30 @@ class SourceDailyBarIngestionService:
             provider_code=request.provider_code,
             provenance_id=normalized.provenance_id,
         )
+
+
+class SourceFundamentalFactIngestionService:
+    def __init__(
+        self,
+        connectors: Mapping[str, FundamentalFactConnector],
+        ingestion: DataIngestionService,
+    ) -> None:
+        self._connectors = dict(connectors)
+        self._ingestion = ingestion
+
+    def ingest(
+        self,
+        source_id: str,
+        provider_code: str,
+        metric_name: str,
+    ) -> NormalizedFundamentalFact:
+        connector = self._connectors.get(source_id)
+        if connector is None:
+            raise ProviderCategorizedError(
+                category="unavailable",
+                provider_name=source_id,
+                request_category="fundamental-fact",
+                status=404,
+                retry="never",
+            )
+        return connector.fetch(provider_code=provider_code, metric_code=metric_name)

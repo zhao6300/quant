@@ -92,6 +92,16 @@ def _number_field(row: dict[str, Any], field: str) -> Decimal:
     return _large_decimal(row[field])
 
 
+def _decimal_value(value: object) -> Decimal:
+    try:
+        result = Decimal(str(value))
+    except (InvalidOperation, TypeError, ValueError) as error:
+        raise _invalid_response("decimal") from error
+    if result.is_finite():
+        return result
+    raise _invalid_response("decimal")
+
+
 def _decimal_at(values: dict[str, Any], field: str, index: int) -> Decimal:
     series = values.get(field)
     if not isinstance(series, list) or index >= len(series):

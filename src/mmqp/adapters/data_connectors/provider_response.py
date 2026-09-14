@@ -28,3 +28,26 @@ def envelope(
         normalized=ProviderNormalizedResponseV1({"format": "name", "origin": origin}),
         source_version=source_version,
     )
+
+
+def fact_envelope(
+    provider_name: str,
+    canonical_asset_id: str,
+    metric_name: str,
+    source_url: str,
+) -> ProviderResponseEnvelopeV1:
+    return ProviderResponseEnvelopeV1(
+        provider_name=provider_name,
+        request_category="fundamental-fact",
+        request_parameters=ProviderRequest(
+            provider_name=provider_name,
+            request_category="fundamental-fact",
+            parameters={
+                "canonical_asset_id": canonical_asset_id,
+                "metric_name": metric_name,
+                "source": source_url,
+            },
+        ).parameters,
+        retrieval_time=datetime.now(UTC),
+        normalized=ProviderNormalizedResponseV1({"source": source_url}),
+    )

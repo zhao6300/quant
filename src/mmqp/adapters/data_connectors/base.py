@@ -26,6 +26,21 @@ class NormalizedDailyBar:
     response: ProviderResponseEnvelopeV1
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class NormalizedFundamentalFact:
+    canonical_asset_id: str
+    metric_name: str
+    value: Decimal
+    unit: str
+    currency: str | None
+    period_start: date
+    period_end: date
+    provider_available_at: datetime
+    provider: str
+    provenance_id: str
+    response: ProviderResponseEnvelopeV1
+
+
 class DailyBarConnector(ABC):
     @property
     @abstractmethod
@@ -33,3 +48,12 @@ class DailyBarConnector(ABC):
 
     @abstractmethod
     def fetch(self, provider_code: str, trading_date: date) -> NormalizedDailyBar: ...
+
+
+class FundamentalFactConnector(ABC):
+    @property
+    @abstractmethod
+    def provider(self) -> str: ...
+
+    @abstractmethod
+    def fetch(self, provider_code: str, metric_code: str) -> NormalizedFundamentalFact: ...

@@ -25,6 +25,9 @@ class HTTPTransport:
     def text(self, url: str) -> str:
         return self._content(url).decode("utf-8")
 
+    def request(self, url: str) -> str:
+        return self.text(url)
+
     def json(self, url: str) -> dict[str, object]:
         parsed = json.loads(self._content(url).decode("utf-8"))
         return parsed if isinstance(parsed, dict) else {}
