@@ -466,206 +466,274 @@ function App() {
         </header>
 
         {activePageId === "overview" && (
-          <section className="stat-row">
-            <h2 id="page-title-overview">研究总览</h2>
-            <article className="stat-card glass">
-              <span>工作区</span>
-              <strong>{status?.workspace_count ?? "—"}</strong>
-              <small>本地封面的项目</small>
-            </article>
-            <article className="stat-card glass">
-              <span>数据快照</span>
-              <strong>pending</strong>
-              <small>等待摄取层</small>
-            </article>
-            <article className="stat-card glass">
-              <span>运行记录</span>
-              <strong>pending</strong>
-              <small>等待实验层</small>
-            </article>
-            <article className="stat-card glass">
-              <span>Schema</span>
-              <strong>{status?.schema_version ?? "—"}</strong>
-              <small>
-                {status?.compatible_restore_schema_versions.join(", ") || "—"}
-              </small>
-            </article>
+          <section className="overview-shelf">
+            <h2 id="page-title-overview">平台状态</h2>
+            <div className="stat-row">
+              <article className="stat-card glass">
+                <span>工作区</span>
+                <strong>{status?.workspace_count ?? "—"}</strong>
+                <small>本地封面的项目</small>
+              </article>
+              <article className="stat-card glass">
+                <span>数据快照</span>
+                <strong>pending</strong>
+                <small>等待摄取层</small>
+              </article>
+              <article className="stat-card glass">
+                <span>运行记录</span>
+                <strong>pending</strong>
+                <small>等待实验层</small>
+              </article>
+              <article className="stat-card glass">
+                <span>Schema</span>
+                <strong>{status?.schema_version ?? "—"}</strong>
+                <small>
+                  {status?.compatible_restore_schema_versions.join(", ") || "—"}
+                </small>
+              </article>
+            </div>
+
+            <div className="panel-grid">
+              <section className="glass card">
+                <div className="card-head">
+                  <div>
+                    <h2>新建工作区</h2>
+                    <p>工作区使用本地 SQLite、不可变对象存储和内容清单。</p>
+                  </div>
+                </div>
+                <div className="form-grid">
+                  <label>
+                    绝对路径
+                    <input
+                      value={path}
+                      onChange={(event) => setPath(event.target.value)}
+                      placeholder="/Users/you/MMQP/Research"
+                    />
+                  </label>
+                  <label>
+                    显示名称
+                    <input
+                      value={displayName}
+                      onChange={(event) => setDisplayName(event.target.value)}
+                      placeholder="多市场研究"
+                    />
+                  </label>
+                  <button
+                    className="primary-button"
+                    onClick={() => void createWorkspace()}
+                    disabled={submitting}
+                  >
+                    {submitting ? "创建中…" : "创建工作区"}
+                  </button>
+                </div>
+                {error && <pre className="error-banner">{error}</pre>}
+              </section>
+
+              <section className="glass card">
+                <div className="card-head">
+                  <div>
+                    <h2>已注册工作区</h2>
+                    <p>当前只显示本地注册表记录。</p>
+                  </div>
+                </div>
+                <div className="workspace-list">
+                  {workspaces.map((workspace) => (
+                    <div key={workspace.id} className="workspace-row">
+                      <div>
+                        <strong>{workspace.display_name}</strong>
+                        <small>{workspace.path}</small>
+                      </div>
+                      <span>UID {workspace.bound_uid}</span>
+                    </div>
+                  ))}
+                </div>
+                {workspaces.length === 0 && (
+                  <div className="workspace-empty">
+                    <strong>暂无本地工作区</strong>
+                    <p>输入绝对路径后创建；数据快照与运行记录会进入当前封面。</p>
+                  </div>
+                )}
+              </section>
+
+              <section className="glass card quick-start-card">
+                <div className="card-head">
+                  <div>
+                    <h2>快速开始</h2>
+                    <p>直接进入行情、数据或研究运行。</p>
+                  </div>
+                </div>
+                <div className="quick-actions">
+                  <button
+                    className="primary-button"
+                    type="button"
+                    onClick={() => setActivePageId("quote")}
+                  >
+                    读取行情
+                  </button>
+                  <button
+                    className="button muted"
+                    type="button"
+                    onClick={() => setActivePageId("data")}
+                  >
+                    查询数据
+                  </button>
+                  <button
+                    className="button muted"
+                    type="button"
+                    onClick={() => setActivePageId("backtest")}
+                  >
+                    提交运行
+                  </button>
+                </div>
+                <div className="quick-status">
+                  <div>
+                    <span>接入源</span>
+                    <strong>{sources?.length ?? "—"}</strong>
+                  </div>
+                  <div>
+                    <span>Schema</span>
+                    <strong>{status?.schema_version ?? "—"}</strong>
+                  </div>
+                  <div>
+                    <span>服务</span>
+                    <strong>{socialData.startsWith("Online") ? "在线" : "离线"}</strong>
+                  </div>
+                </div>
+              </section>
+            </div>
           </section>
         )}
 
-        {activePageId === "overview" && (
-          <div className="panel-grid">
-            <section className="glass card">
+        {activePageId === "data" && (
+          <div className="data-workspace">
+            <aside className="data-controls glass">
               <div className="card-head">
-                <div>
-                  <h2>新建工作区</h2>
-                  <p>工作区使用本地 SQLite、不可变对象存储和内容清单。</p>
-                </div>
+                <h2>数据查询</h2>
+                <p>
+                  读取本地不可变数据快照，结果按 Canonical_Asset_ID、观察日期和版本排序。
+                </p>
               </div>
-              <div className="form-grid">
+              <form
+                className="data-control"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void runQuery();
+                }}
+              >
                 <label>
-                  绝对路径
-                  <input
-                    value={path}
-                    onChange={(event) => setPath(event.target.value)}
-                    placeholder="/Users/you/MMQP/Research"
-                  />
+                  数据集
+                  <select
+                    value={datasetName}
+                    onChange={(event) =>
+                      setDatasetName(event.target.value as QueryDataset)
+                    }
+                  >
+                    {DATASETS.map((dataset) => (
+                      <option key={dataset} value={dataset}>
+                        {dataset}
+                      </option>
+                    ))}
+                  </select>
                 </label>
                 <label>
-                  显示名称
+                  过滤字段
+                  <select
+                    data-testid="query-field"
+                    value={queryField}
+                    onChange={(event) => {
+                      if (event.target.value === "") {
+                        setQueryValue("");
+                      }
+                      setQueryField(event.target.value);
+                    }}
+                  >
+                    <option value="">不过滤</option>
+                    {(FILTER_OPTIONS[datasetName] ?? []).map((field) => (
+                      <option key={field} value={field}>
+                        {field}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  过滤值
                   <input
-                    value={displayName}
-                    onChange={(event) => setDisplayName(event.target.value)}
-                    placeholder="多市场研究"
+                    value={queryValue}
+                    onChange={(event) => setQueryValue(event.target.value)}
+                    disabled={!queryField}
                   />
                 </label>
                 <button
                   className="primary-button"
-                  onClick={() => void createWorkspace()}
-                  disabled={submitting}
+                  data-testid="query-submit"
+                  type="submit"
                 >
-                  {submitting ? "创建中…" : "创建工作区"}
+                  查询
                 </button>
-              </div>
-              {error && <pre className="error-banner">{error}</pre>}
-            </section>
-
-            <section className="glass card">
-              <div className="card-head">
-                <div>
-                  <h2>已注册工作区</h2>
-                  <p>当前只显示本地注册表记录。</p>
-                </div>
-              </div>
-              <div className="workspace-list">
-                {workspaces.map((workspace) => (
-                  <div key={workspace.id} className="workspace-row">
-                    <div>
-                      <strong>{workspace.display_name}</strong>
-                      <small>{workspace.path}</small>
-                    </div>
-                    <span>UID {workspace.bound_uid}</span>
+              </form>
+            </aside>
+            <section
+              className={`data-stage glass ${
+                queryResult ? "data-stage-result" : "data-stage-empty"
+              }`}
+            >
+              {queryResult ? (
+                <>
+                  <div className="query-summary">
+                    <span>快照 {queryResult.snapshot_id}</span>
+                    <span>
+                      匹配 {queryResult.matching_count} · 返回{" "}
+                      {queryResult.returned_count}
+                    </span>
+                    <span>
+                      过滤 {queryResult.applied_filter_count} · 还有更多{" "}
+                      {queryResult.additional_results ? "是" : "否"}
+                    </span>
                   </div>
-                ))}
-              </div>
+                  <div className="query-results">
+                    {queryResult.rows.length > 0 && (
+                      <table className="query-table">
+                        <thead>
+                          <tr>
+                            {Object.keys(queryResult.rows[0]).map((column) => (
+                              <th key={column}>{column}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {queryResult.rows.map((row, rowIndex) => (
+                            <tr key={rowIndex}>
+                              {Object.keys(
+                                queryResult.rows[0],
+                              ).map((column) => (
+                                <td key={column}>
+                                  <span className="query-cell">
+                                    {typeof row[column] === "object" &&
+                                    row[column] !== null
+                                      ? JSON.stringify(row[column])
+                                      : String(row[column] ?? "—")}
+                                  </span>
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                    {queryResult.rows.length === 0 && <p>没有匹配记录。</p>}
+                  </div>
+                </>
+              ) : (
+                <div className="query-empty">
+                  <strong>选择数据集与过滤条件</strong>
+                  <p>
+                    点击查询后，右侧展示匹配记录和快照摘要，数据按 Canonical_Asset_ID、观察日期和版本排序。
+                  </p>
+                </div>
+              )}
+              {queryError && <pre className="error-banner">{queryError}</pre>}
             </section>
           </div>
-        )}
-
-        {activePageId === "data" && (
-          <section className="glass card">
-            <div className="card-head">
-              <h2>数据查询</h2>
-              <p>
-                读取本地不可变数据快照，结果按
-                Canonical_Asset_ID、观察日期和版本排序。
-              </p>
-            </div>
-            <form
-              className="query-form"
-              onSubmit={(event) => {
-                event.preventDefault();
-                void runQuery();
-              }}
-            >
-              <label>
-                数据集
-                <select
-                  value={datasetName}
-                  onChange={(event) =>
-                    setDatasetName(event.target.value as QueryDataset)
-                  }
-                >
-                  {DATASETS.map((dataset) => (
-                    <option key={dataset} value={dataset}>
-                      {dataset}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                过滤字段
-                <select
-                  data-testid="query-field"
-                  value={queryField}
-                  onChange={(event) => {
-                    if (event.target.value === "") {
-                      setQueryValue("");
-                    }
-                    setQueryField(event.target.value);
-                  }}
-                >
-                  <option value="">不过滤</option>
-                  {(FILTER_OPTIONS[datasetName] ?? []).map((field) => (
-                    <option key={field} value={field}>
-                      {field}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                过滤值
-                <input
-                  value={queryValue}
-                  onChange={(event) => setQueryValue(event.target.value)}
-                  disabled={!queryField}
-                />
-              </label>
-              <button
-                className="primary-button"
-                data-testid="query-submit"
-                type="submit"
-              >
-                查询
-              </button>
-            </form>
-            {queryResult && (
-              <div className="query-summary">
-                <span>快照 {queryResult.snapshot_id}</span>
-                <span>
-                  匹配 {queryResult.matching_count} · 返回{" "}
-                  {queryResult.returned_count}
-                </span>
-                <span>
-                  过滤 {queryResult.applied_filter_count} · 还有更多{" "}
-                  {queryResult.additional_results ? "是" : "否"}
-                </span>
-              </div>
-            )}
-            {queryResult && (
-              <div className="query-results">
-                {queryResult.rows.length > 0 && (
-                  <table className="query-table">
-                    <thead>
-                      <tr>
-                        {Object.keys(queryResult.rows[0]).map((column) => (
-                          <th key={column}>{column}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {queryResult.rows.map((row, rowIndex) => (
-                        <tr key={rowIndex}>
-                          {Object.keys(queryResult.rows[0]).map((column) => (
-                            <td key={column}>
-                              <span className="query-cell">
-                                {typeof row[column] === "object" &&
-                                row[column] !== null
-                                  ? JSON.stringify(row[column])
-                                  : String(row[column] ?? "—")}
-                              </span>
-                            </td>
-                          ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-                {queryResult.rows.length === 0 && <p>没有匹配记录。</p>}
-              </div>
-            )}
-            {queryError && <pre className="error-banner">{queryError}</pre>}
-          </section>
         )}
 
         {activePageId === "quote" && (
@@ -764,7 +832,13 @@ function App() {
                   <strong>{symbol}</strong>
                 </div>
                 <div className="quote-state">
-                  {quoteLoading ? "连接中" : quote ? "已加载" : "等待连接"}
+                  {quoteLoading
+                    ? "连接中"
+                    : quote
+                      ? "已加载"
+                      : quoteError
+                        ? "连接失败"
+                        : "等待连接"}
                 </div>
               </div>
               {quoteError && <pre className="error-banner">{quoteError}</pre>}
@@ -817,8 +891,14 @@ function App() {
                   </dl>
                 </div>
               ) : (
-                <div className="quote-empty">
-                  <strong>{quoteLoading ? "正在连接数据源" : "等待真实行情"}</strong>
+                <div className={`quote-empty ${quoteError ? "failed" : ""}`}>
+                  <strong>
+                    {quoteLoading
+                      ? "正在连接数据源"
+                      : quoteError
+                        ? "连接失败"
+                        : "等待真实行情"}
+                  </strong>
                   <p>
                     点击数据源卡片后，这里会直接加载所选供给的单日 OHLCV，不需要手动提交 POST。
                   </p>
@@ -831,7 +911,7 @@ function App() {
         {activePageId === "sources" && (
           <section className="glass card source-shelf">
             <div className="card-head">
-              <h2>外部数据源</h2>
+              <h2>目录与接入状态</h2>
               <p>
                 内置 19 个免费/本地研究源目录；点击行情源卡片进入独立行情快照页。
               </p>
@@ -873,10 +953,7 @@ function App() {
                     <dd>
                     <ul>
                       {activeSource.usage.request_fields.map((field) => (
-                        <li key={field.name}>
-                          <strong>{field.label}</strong>
-                          <span>{field.description}</span>
-                        </li>
+                        <li key={field.name}>{field.label}</li>
                       ))}
                     </ul>
                     </dd>
@@ -912,7 +989,7 @@ function App() {
                   role="button"
                   tabIndex={0}
                 >
-                  <div>
+                  <div className="source-title">
                     <span>{source.category}</span>
                     <strong>{source.display_name}</strong>
                   </div>
@@ -954,14 +1031,15 @@ function App() {
         )}
 
         {activePageId === "backtest" && (
-          <section id="research-runs" className="glass card">
+          <section id="research-runs" className="glass card run-shelf">
             <div className="card-head">
-              <h2>研究运行</h2>
+              <h2>参数与引用</h2>
               <p>
                 提交研究窗口与全部引用版本；当前仅生成仿真模拟回执，不会发送真实订单。
               </p>
             </div>
-            <form className="run-form"
+            <div className="run-body">
+              <form className="run-form"
               onSubmit={(event) => {
                 event.preventDefault();
                 void submitRun();
@@ -984,10 +1062,8 @@ function App() {
                 />
               </label>
               <div className="quote-source">
-                <strong>分析行情源</strong>
-                <small>
-                  {activeSource?.display_name ?? "未选择"}
-                </small>
+                <span>分析行情源</span>
+                <strong>{activeSource?.display_name ?? "未选择"}</strong>
               </div>
               <label>
                 基准货币
@@ -1021,16 +1097,24 @@ function App() {
                 {runSubmitting ? "提交中…" : "提交研究"}
               </button>
             </form>
-            {runReceipt && (
-              <div className="run-receipt">
-                <span>
-                  {runReceipt.run_created ? "运行已创建" : "模拟回执"}
-                </span>
-                <span>快照 {runReceipt.snapshot_id}</span>
-                <small>{runReceipt.disclaimer}</small>
-              </div>
-            )}
+            <div className={`run-receipt ${runReceipt ? "" : "pending"}`}>
+              <span>
+                {runReceipt?.run_created
+                  ? "运行已创建"
+                  : runReceipt
+                    ? "模拟回执"
+                    : "模拟回执"}
+              </span>
+              <span>
+                {runReceipt ? `快照 ${runReceipt.snapshot_id}` : "尚未提交"}
+              </span>
+              <small>
+                {runReceipt?.disclaimer ??
+                  "提交窗口与版本后生成仿真回执，不发送真实订单。"}
+              </small>
+            </div>
             {runError && <pre className="error-banner">{runError}</pre>}
+            </div>
           </section>
         )}
 
@@ -1038,14 +1122,14 @@ function App() {
           <section id="market-calendars" className="glass card market-shelf">
             <div className="card-head">
               <div>
-                <h2>多市场日历与规则</h2>
+              <h2>买盘校验</h2>
                 <p>
                   查询交易/估值日历，并按当前基准评估买盘的 lot、tick、可用性和
                   T+n 结算时钟。
                 </p>
               </div>
             </div>
-
+            <div className="market-body">
             <div className="market-query">
               <label>
                 市场
@@ -1117,6 +1201,14 @@ function App() {
                   <strong>{tradingCalendar.days.length}</strong>
                   <small>成交日 / 休息日 / 半日</small>
                 </div>
+                <div className="metric">
+                  <span>生效范围</span>
+                  <strong>
+                    {tradingCalendar.effective_from.slice(0, 4)} ·{" "}
+                    {tradingCalendar.effective_to?.slice(0, 4) ?? "—"}
+                  </strong>
+                  <small>年度日历版本</small>
+                </div>
               </div>
             )}
 
@@ -1179,6 +1271,7 @@ function App() {
             )}
 
             {marketError && <pre className="error-banner">{marketError}</pre>}
+            </div>
           </section>
         )}
       </main>
