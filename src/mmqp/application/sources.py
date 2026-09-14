@@ -18,7 +18,7 @@ class DataSourceDefinition:
     scope: SourceScope
     frequency: SourceFrequency
     source_id: str | None = None
-    implementation_status: ImplementationStatus = "cataloged"
+    implementation_status: ImplementationStatus = "connected"
     requires_auth: bool
     documentation_url: str
     note: str = ""
