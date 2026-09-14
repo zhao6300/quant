@@ -12,6 +12,7 @@ import type {
   TradingCalendarVersion,
   ValuationCalendarVersion,
   Workspace,
+  SourceTicker,
 } from "../types";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
@@ -46,6 +47,21 @@ export class ApiClient {
 
   dataSources(): Promise<DataSource[]> {
     return this.request<DataSource[]>("/api/v1/data-sources");
+  }
+
+  sourceQuote(
+    sourceId: string,
+    payload: {
+      market: string;
+      exchange: string;
+      symbol: string;
+      trading_date: string;
+    },
+  ): Promise<SourceTicker> {
+    return this.request<SourceTicker>(
+      `/api/v1/data-sources/${sourceId}/daily-bars`,
+      { method: "POST", body: JSON.stringify(payload) },
+    );
   }
 
   workspaces(): Promise<Workspace[]> {

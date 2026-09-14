@@ -741,6 +741,48 @@ def ingest_source_daily_bar(
     }
 
 
+@app.post("/api/v1/data-sources/{source_id}/quote-preview")
+def preview_source_daily_bar(
+    source_id: str,
+    request: SourceDailyBarRequestModel,
+    service: Annotated[
+        SourceDailyBarIngestionService, Depends(get_source_ingestion_service)
+    ],
+) -> dict[str, Any]:
+    preview = service.preview(
+        SourceDailyBarCommand(
+            source_id=source_id,
+            market=request.market,
+            exchange=request.exchange,
+            canonical_asset_id=request.canonical_asset_id,
+            provider_code=request.provider_code,
+            trading_date=request.trading_date,
+        )
+    )
+    observation = preview.observation
+    if not isinstance(observation, DailyBar):
+        raise _domain_error(500, "quote preview returned a non-daily-bar observation")
+    return {
+        "source_id": preview.source_id,
+        "market": request.market.upper(),
+        "exchange": request.exchange.upper(),
+        "canonical_asset_id": preview.canonical_asset_id,
+        "provider_code": observation.provider_code,
+        "trading_date": observation.trading_date.isoformat(),
+        "open": str(observation.open),
+        "high": str(observation.high),
+        "low": str(observation.low),
+        "close": str(observation.close),
+        "volume": str(observation.volume),
+        "turnover": str(observation.turnover),
+        "trading_currency": observation.trading_currency,
+        "provider_available_at": observation.provider_available_at.isoformat(),
+        "retrieved_at": observation.retrieved_at.isoformat(),
+        "provider": observation.provider,
+        "provenance_id": observation.provenance_id,
+    }
+
+
 @app.get("/api/v1/queries/{dataset}")
 def get_query_dataset(
     dataset: str,

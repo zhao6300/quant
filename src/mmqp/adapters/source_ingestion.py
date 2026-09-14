@@ -35,6 +35,16 @@ class DailyBarSourceIngest:
     provider_code: str
 
 
+@dataclass(frozen=True, slots=True)
+class SourceDailyBarPreview:
+    source_id: str
+    market: str
+    exchange: str
+    canonical_asset_id: str
+    provider_code: str
+    observation: NormalizedDailyBar
+
+
 class SourceDailyBarIngestionService:
     def __init__(
         self,
@@ -43,6 +53,29 @@ class SourceDailyBarIngestionService:
     ) -> None:
         self._connectors = dict(connectors)
         self._ingestion = ingestion
+
+    def preview(self, request: SourceDailyBarCommand) -> SourceDailyBarPreview:
+        connector = self._connectors.get(request.source_id)
+        if connector is None:
+            raise ProviderCategorizedError(
+                category="unavailable",
+                provider_name=request.source_id,
+                request_category="daily-bar",
+                status=404,
+                retry="never",
+            )
+        normalized = connector.fetch(
+            provider_code=request.provider_code,
+            trading_date=request.trading_date,
+        )
+        return SourceDailyBarPreview(
+            source_id=request.source_id,
+            market=request.market,
+            exchange=request.exchange,
+            canonical_asset_id=request.canonical_asset_id,
+            provider_code=request.provider_code,
+            observation=self._observation(request, normalized),
+        )
 
     def ingest(self, request: SourceDailyBarCommand) -> DailyBarSourceIngest:
         connector = self._connectors.get(request.source_id)

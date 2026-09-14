@@ -38,6 +38,16 @@ export interface DataSource {
   };
 }
 
+export type SourceTicker = {
+  id: string;
+  symbol: string;
+  marketId: string;
+  open: string;
+  close: string;
+  volume: string;
+  time: string;
+};
+
 export interface AssetIdentity {
   market: string;
   asset_type: string;

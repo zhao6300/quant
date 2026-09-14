@@ -12,6 +12,7 @@ import type {
   ValuationCalendarVersion,
   Workspace,
   DataSource,
+  SourceTicker,
 } from "./types";
 
 const client = new ApiClient();
@@ -107,6 +108,13 @@ const NAVIGATION = [
     subtitle: "Integrated Sources",
     description: "接入目录化的免费本地/远端研究源。",
   },
+  {
+    id: "quote",
+    label: "行情",
+    title: "行情快照",
+    subtitle: "Market Quote",
+    description: "选择已接入的数据源并读取单日行情。",
+  },
 ] as const;
 
 type NavigationId = (typeof NAVIGATION)[number]["id"];
@@ -155,6 +163,9 @@ function App() {
   const [runError, setRunError] = useState<string | null>(null);
   const [runSubmitting, setRunSubmitting] = useState(false);
   const [activeSourceId, setActiveSourceId] = useState<string>("stooq");
+  const [symbol, setSymbol] = useState<string>("");
+  const [quoteDate, setQuoteDate] = useState<string>("");
+  const [quote, setQuote] = useState<SourceTicker | null>(null);
   const [displayName, setDisplayName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -165,6 +176,17 @@ function App() {
     NAVIGATION.find((page) => page.id === activePageId) ?? NAVIGATION[0];
   const activeSource =
     sources?.find((source) => source.id === activeSourceId) ?? sources?.[0];
+  const sourceDisplayName = activeSource?.display_name ?? "无";
+
+  const setSourceFocus = useCallback(
+    (source: DataSource) => {
+      setActiveSourceId(source.id);
+      setSymbol("");
+      setQuote(null);
+      setActivePageId("quote");
+    },
+    [],
+  );
 
   const evaluate = useCallback(async () => {
     const isActive = activeMarket.market === "A_SHARE";
@@ -225,6 +247,20 @@ function App() {
       setQueryError("查询失败。");
     }
   }, [datasetName, queryField, queryValue]);
+
+  const previewQuote = useCallback(async () => {
+    try {
+      const quotation = await client.sourceQuote(activeSourceId, {
+        market: selectedMarketId,
+        exchange: "",
+        symbol,
+        trading_date: quoteDate,
+      });
+      setQuote(quotation);
+    } catch (error) {
+      console.error(error);
+    }
+  }, [selectedMarketId, symbol, quoteDate, activeSourceId]);
 
   const submitRun = useCallback(async () => {
     if (!runWindowStart || !runWindowEnd) {
@@ -614,14 +650,14 @@ function App() {
                   <div>
                     <dt>请求字段</dt>
                     <dd>
-                      <ul>
-                        {activeSource.usage.request_fields.map((field) => (
-                          <li key={field.name}>
-                            <strong>{field.label}</strong>
-                            <span>{field.description}</span>
-                          </li>
-                        ))}
-                      </ul>
+                    <ul>
+                      {activeSource.usage.request_fields.map((field) => (
+                        <li key={field.name}>
+                          <strong>{field.label}</strong>
+                          <span>{field.description}</span>
+                        </li>
+                      ))}
+                    </ul>
                     </dd>
                   </div>
                   <div>
@@ -645,7 +681,7 @@ function App() {
                       ? "source-card glass active"
                       : "source-card glass"
                   }
-                  onClick={() => setActiveSourceId(source.id)}
+                  onClick={() => setSourceFocus(source)}
                   onKeyDown={(event) => {
                     if (event.key === "Enter" || event.key === " ") {
                       event.preventDefault();
@@ -704,8 +740,7 @@ function App() {
                 提交研究窗口与全部引用版本；当前仅生成仿真模拟回执，不会发送真实订单。
               </p>
             </div>
-            <form
-              className="run-form"
+            <form className="run-form"
               onSubmit={(event) => {
                 event.preventDefault();
                 void submitRun();
@@ -727,6 +762,12 @@ function App() {
                   onChange={(event) => setRunWindowEnd(event.target.value)}
                 />
               </label>
+              <div className="quote-source">
+                <strong>分析行情源</strong>
+                <small>
+                  {activeSource?.display_name ?? "未选择"}
+                </small>
+              </div>
               <label>
                 基准货币
                 <input
