@@ -136,6 +136,7 @@ function App() {
   const [runReceipt, setRunReceipt] = useState<RunSubmissionReceipt | null>(null);
   const [runError, setRunError] = useState<string | null>(null);
   const [runSubmitting, setRunSubmitting] = useState(false);
+  const [activeSourceId, setActiveSourceId] = useState<string>("stooq");
   const [displayName, setDisplayName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -143,6 +144,7 @@ function App() {
 
   const activeMarket = marketById(selectedMarketId);
   const activeNavigation = NAVIGATION.find((page) => page.id === activePageId) ?? NAVIGATION[0];
+  const activeSource = sources?.find((source) => source.id === activeSourceId) ?? sources?.[0];
 
   const evaluate = useCallback(async () => {
     const isActive = activeMarket.market === "A_SHARE";
@@ -469,9 +471,56 @@ function App() {
                 {sources?.filter((source) => source.implementation_status === "cataloged").length ?? 0} 个仅目录。
               </p>
             </div>
+            {activeSource && (
+              <section className="source-detail">
+                <div className="detail-head">
+                  <div>
+                    <span>{activeSource.category}</span>
+                    <strong>{activeSource.display_name}</strong>
+                  </div>
+                  <small>{activeSource.scope} · {activeSource.frequency} · {activeSource.provider}</small>
+                  <p>{activeSource.note}</p>
+                </div>
+                <dl className="detail-grid">
+                  <div>
+                    <dt>调用方法</dt>
+                    <dd>{activeSource.usage.method} {activeSource.usage.endpoint}</dd>
+                  </div>
+                  <div>
+                    <dt>请求字段</dt>
+                    <dd>
+                      <ul>
+                        {activeSource.usage.request_fields.map((field) => (
+                          <li key={field.name}>
+                            <strong>{field.label}</strong>
+                            <span>{field.description}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>所需环境变量</dt>
+                    <dd>{activeSource.usage.required_env.length ? activeSource.usage.required_env.join(" · ") : "无"}</dd>
+                  </div>
+                </dl>
+              </section>
+            )}
             <div className="source-grid">
               {sources?.map((source) => (
-                <article key={source.id} className="source-card glass">
+                <article
+                  key={source.id}
+                  className={activeSource?.id === source.id ? "source-card glass active" : "source-card glass"}
+                  onClick={() => setActiveSourceId(source.id)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      setActiveSourceId(source.id);
+                    }
+                  }}
+                  role="button"
+                  tabIndex={0}
+                >
                   <div>
                     <span>{source.category}</span>
                     <strong>{source.display_name}</strong>

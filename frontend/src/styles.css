@@ -131,6 +131,60 @@ input:focus { outline: none; border-color: #9ab8ef; box-shadow: 0 0 0 4px rgba(0
 .metric span,
 .metric small { color: var(--muted); font-size: 12px; }
 .metric strong { font-size: 20px; letter-spacing: -0.025em; overflow-wrap: anywhere; }
+.source-detail {
+  margin: 8px 0 18px;
+  padding: 18px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  display: grid;
+  gap: 16px;
+}
+.detail-head {
+  display: grid;
+  gap: 6px;
+}
+.detail-head strong {
+  font-size: 20px;
+  letter-spacing: -0.02em;
+}
+.detail-head small,
+.detail-head p,
+.detail-grid dd {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+.detail-head p {
+  margin: 0;
+}
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin: 0;
+}
+.detail-grid dt {
+  color: var(--muted);
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+.detail-grid dd {
+  margin: 0;
+}
+.detail-grid dd ul {
+  margin: 0;
+  padding-left: 0;
+  list-style: none;
+}
+.detail-grid dd li {
+  margin-bottom: 6px;
+}
+.detail-grid dd li strong {
+  display: block;
+  color: var(--text);
+  font-size: 13px;
+}
 .source-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -142,6 +196,17 @@ input:focus { outline: none; border-color: #9ab8ef; box-shadow: 0 0 0 4px rgba(0
   background: rgba(255, 255, 255, 0.62);
   display: grid;
   gap: 8px;
+}
+.source-card.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.12);
+}
+.source-card:hover {
+  border-color: var(--accent);
+}
+.source-card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 .source-card span {
   color: var(--muted);
