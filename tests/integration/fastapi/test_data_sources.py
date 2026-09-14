@@ -53,3 +53,13 @@ def test_data_sources_endpoint_returns_the_catalog() -> None:
         "twelvedata",
         "nasdaq-data-link",
     }
+    assert {
+        source["id"]: source["implementation_status"]
+        for source in payload
+        if source["implementation_status"] == "connected"
+    } == {"stooq": "connected", "yahoo-finance": "connected"}
+    assert {
+        source["id"]: source["source_id"]
+        for source in payload
+        if source["id"] in {"stooq", "yahoo-finance"}
+    } == {"stooq": "stooq", "yahoo-finance": "yahoo-finance"}

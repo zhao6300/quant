@@ -14,17 +14,21 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from mmqp import PLATFORM_VERSION
+from mmqp.adapters.data_connectors.registry import daily_bar_connectors
+from mmqp.adapters.source_ingestion import SourceDailyBarCommand, SourceDailyBarIngestionService
 from mmqp.adapters.sqlite.asset_repository import SqliteAssetRegistryRepository
 from mmqp.adapters.sqlite.baselines import seed_market_baseline
 from mmqp.adapters.sqlite.calendars import (
     SqliteTradingCalendarRepository,
     SqliteValuationCalendarRepository,
 )
+from mmqp.adapters.sqlite.data_versions import SqliteDataVersionRepository
 from mmqp.adapters.sqlite.market_rules import SqliteMarketRuleRepository
 from mmqp.adapters.sqlite.query_source import SqliteQuerySource
 from mmqp.adapters.sqlite.workspace_repository import SqliteWorkspaceRepository
 from mmqp.application.assets import AssetRegistryService, RegisterAssetRequest
 from mmqp.application.calendars import CalendarService
+from mmqp.application.ingestion import DataIngestionService
 from mmqp.application.market_rules import MarketRuleService
 from mmqp.application.queries import (
     LIVE_SNAPSHOT_ID,
@@ -49,6 +53,7 @@ from mmqp.domain.calendars import (
     ValuationCalendarVersion,
 )
 from mmqp.domain.errors import DomainError, ProblemV1
+from mmqp.domain.ingestion import DailyBar
 from mmqp.domain.market_rules import (
     EvaluatedTrade,
     HaltStatus,
@@ -252,6 +257,14 @@ class ResearchRunRequestModel(BaseModel):
     risk_model_version: str = Field(min_length=1, max_length=120)
 
 
+class SourceDailyBarRequestModel(BaseModel):
+    market: str = Field(min_length=1, max_length=40)
+    exchange: str = Field(min_length=1, max_length=64)
+    canonical_asset_id: str = Field(min_length=1, max_length=128)
+    provider_code: str = Field(min_length=1, max_length=128)
+    trading_date: date
+
+
 def get_trading_calendar_repository() -> Generator[TradingCalendarRepository]:
     database = control_database_path
     trading_repository = SqliteTradingCalendarRepository(database)
@@ -301,6 +314,16 @@ def get_query_service(
     source: Annotated[SqliteQuerySource, Depends(get_query_source)],
 ) -> ReadonlyQueryService:
     return ReadonlyQueryService(source, SUPPORTED_QUERY_FILTERS)
+
+
+def get_source_ingestion_service() -> SourceDailyBarIngestionService:
+    database = str(Path("/tmp/mmqp-source-ingestion.sqlite3"))
+    ingestion = DataIngestionService(
+        SqliteDataVersionRepository(database),
+        SqliteTradingCalendarRepository(database),
+        SqliteValuationCalendarRepository(database),
+    )
+    return SourceDailyBarIngestionService(daily_bar_connectors(), ingestion)
 
 
 WorkspaceRepo = Annotated[WorkspaceRepository, Depends(get_workspace_repository)]
@@ -413,6 +436,7 @@ def list_sources() -> list[dict[str, Any]]:
         {
             "id": source.id,
             "provider": source.provider,
+            "source_id": source.source_id,
             "display_name": source.display_name,
             "category": source.category,
             "scope": source.scope,
@@ -681,6 +705,38 @@ def submit_run(request: ResearchRunRequestModel) -> dict[str, Any]:
         "result_kind": receipt.result_kind,
         "disclaimer": receipt.disclaimer,
         "run_created": receipt.run_created,
+    }
+
+
+@app.post("/api/v1/data-sources/{source_id}/daily-bars", status_code=201)
+def ingest_source_daily_bar(
+    source_id: str,
+    request: SourceDailyBarRequestModel,
+    service: Annotated[SourceDailyBarIngestionService, Depends(get_source_ingestion_service)],
+) -> dict[str, Any]:
+    ingest = service.ingest(
+        SourceDailyBarCommand(
+            source_id=source_id,
+            market=request.market,
+            exchange=request.exchange,
+            canonical_asset_id=request.canonical_asset_id,
+            provider_code=request.provider_code,
+            trading_date=request.trading_date,
+        )
+    )
+    observation = ingest.version.observation
+    if not isinstance(observation, DailyBar):
+        raise _domain_error(500, "source ingest returned a non-daily-bar observation")
+    return {
+        "dataset": ingest.dataset,
+        "version_id": ingest.version.version_id,
+        "revision_id": ingest.version.revision_id,
+        "asset_id": ingest.version.canonical_asset_id,
+        "provider_code": observation.provider_code,
+        "provider_available_at": observation.provider_available_at.isoformat(),
+        "retrieved_at": observation.retrieved_at.isoformat(),
+        "provider": observation.provider,
+        "provenance_id": observation.provenance_id,
     }
 
 

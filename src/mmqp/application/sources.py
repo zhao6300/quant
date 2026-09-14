@@ -17,6 +17,7 @@ class DataSourceDefinition:
     category: SourceCategory
     scope: SourceScope
     frequency: SourceFrequency
+    source_id: str | None = None
     implementation_status: ImplementationStatus = "cataloged"
     requires_auth: bool
     documentation_url: str
@@ -42,6 +43,8 @@ DATA_SOURCES: tuple[DataSourceDefinition, ...] = (
         category="market",
         scope="GLOBAL",
         frequency="daily",
+        source_id="stooq",
+        implementation_status="connected",
         requires_auth=False,
         documentation_url="https://stooq.com/q/d/",
         note="无需 API key 的历史日线 CSV。",
@@ -53,6 +56,8 @@ DATA_SOURCES: tuple[DataSourceDefinition, ...] = (
         category="market",
         scope="GLOBAL",
         frequency="daily",
+        source_id="yahoo-finance",
+        implementation_status="connected",
         requires_auth=False,
         documentation_url="https://pypi.org/project/yfinance/",
         note="涵盖美股、港股、A股日线与基础公司信息。",

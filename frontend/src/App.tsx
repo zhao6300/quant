@@ -464,6 +464,10 @@ function App() {
             <div className="card-head">
               <h2>外部数据源</h2>
               <p>内置数据源目录，包含免费行情、基本面、公告、宏观与交易日历源；当前展示接入规划，尚未执行实际取数。</p>
+              <p className="source-footnote">
+                {sources?.filter((source) => source.implementation_status === "connected").length ?? 0} 个已接入 ·
+                {sources?.filter((source) => source.implementation_status === "cataloged").length ?? 0} 个仅目录。
+              </p>
             </div>
             <div className="source-grid">
               {sources?.map((source) => (
