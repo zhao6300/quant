@@ -1,0 +1,16 @@
+{
+  "version_id": "hkex-equity-2024",
+  "market": "HONG_KONG",
+  "exchange": "HKEX",
+  "asset_type": "EQUITY",
+  "effective_from": "2024-01-01",
+  "effective_to": null,
+  "trading_lot": 100,
+  "tick_size": "0.01",
+  "price_limit_rule": "PROVIDER_BAND_REQUIRED",
+  "price_limit_percent": null,
+  "sell_availability_rule": "SAME_MARKET_DATE",
+  "security_settlement_open_dates": 1,
+  "cash_settlement_open_dates": 1,
+  "permitted_session_types": ["regular"]
+}
