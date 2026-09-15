@@ -219,6 +219,7 @@ function App() {
         return;
       }
       setActiveSourceId(source.id);
+      setSelectedProvider(source.id);
       setSymbol(defaultMarketSymbol(selectedMarketId));
       setQuote(null);
       setQuoteError(null);
@@ -293,7 +294,7 @@ function App() {
     setQuoteLoading(true);
     try {
       const quotation = await client.sourceQuote(
-        selectedProvider ?? activeSourceId,
+        activeSourceId,
         {
           market: activeMarket.market,
           exchange: activeMarket.exchange,
@@ -302,10 +303,10 @@ function App() {
         },
       );
       setQuote(quotation);
-      setSelectedProvider(selectedProvider ?? activeSourceId);
+      setSelectedProvider(activeSourceId);
       setQuoteError(null);
     } catch (error) {
-      if (selectedProvider && selectedProvider !== "yahoo-finance") {
+      if (activeSourceId !== "yahoo-finance") {
         try {
           const fallback = await client.sourceQuote("yahoo-finance", {
             market: activeMarket.market,
@@ -330,7 +331,7 @@ function App() {
       setQuoteLoading(false);
     }
   }, [
-    selectedProvider,
+    activeSourceId,
     activeMarket.exchange,
     activeMarket.market,
     quoteDate,

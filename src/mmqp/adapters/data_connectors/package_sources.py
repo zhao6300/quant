@@ -7,11 +7,23 @@ from dataclasses import dataclass
 from datetime import UTC, date, datetime, time
 from decimal import Decimal
 from typing import Any
+import requests
 
 from mmqp.adapters.data_connectors.base import DailyBarConnector, NormalizedDailyBar
 from mmqp.adapters.data_connectors.normalize import _invalid_response, _provenance_id
 from mmqp.adapters.data_connectors.provider_response import envelope
 from mmqp.domain.calendars import TradingCalendarDay, TradingCalendarVersion, TradingSession
+from mmqp.domain.providers import ProviderCategorizedError
+
+
+def _provider_unavailable(provider: str) -> ProviderCategorizedError:
+    return ProviderCategorizedError(
+        category="unavailable",
+        provider_name=provider,
+        request_category="daily-bar",
+        status=503,
+        retry="safe_after",
+    )
 
 
 class _ModuleDailyBarConnector(DailyBarConnector):
@@ -38,13 +50,16 @@ class AkShareDailyBarConnector(_ModuleDailyBarConnector):
         return "akshare"
 
     def _row_record(self, provider_code: str, trading_date: date) -> dict[str, Any]:
-        frame = self._module.__getattribute__("stock_zh_a_hist")(
-            symbol=provider_code,
-            period="daily",
-            start_date=trading_date.isoformat(),
-            end_date=trading_date.isoformat(),
-            adjust="qfq",
-        )
+        try:
+            frame = self._module.__getattribute__("stock_zh_a_hist")(
+                symbol=provider_code,
+                period="daily",
+                start_date=trading_date.isoformat(),
+                end_date=trading_date.isoformat(),
+                adjust="qfq",
+            )
+        except (requests.RequestException, TimeoutError) as error:
+            raise _provider_unavailable(self.provider) from error
         records = frame.to_dict(orient="records")
         for source_record in records:
             if not isinstance(source_record, dict):
@@ -63,13 +78,16 @@ class BaoStockDailyBarConnector(_ModuleDailyBarConnector):
     def _row_record(self, provider_code: str, trading_date: date) -> dict[str, Any]:
         self._module.__getattribute__("login")()
         try:
-            result = self._module.__getattribute__("query_history_k_data_plus")(
-                provider_code,
-                "date,code,open,high,low,close,volume,amount",
-                start_date=trading_date.isoformat(),
-                end_date=trading_date.isoformat(),
-                frequency="d",
-            )
+            try:
+                result = self._module.__getattribute__("query_history_k_data_plus")(
+                    provider_code,
+                    "date,code,open,high,low,close,volume,amount",
+                    start_date=trading_date.isoformat(),
+                    end_date=trading_date.isoformat(),
+                    frequency="d",
+                )
+            except (requests.RequestException, TimeoutError) as error:
+                raise _provider_unavailable(self.provider) from error
         finally:
             self._module.__getattribute__("logout")()
         for row in result.data:
