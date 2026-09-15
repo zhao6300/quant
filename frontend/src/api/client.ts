@@ -13,6 +13,7 @@ import type {
   ValuationCalendarVersion,
   Workspace,
   SourceTicker,
+  SourceHistory,
 } from "../types";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
@@ -61,6 +62,21 @@ export class ApiClient {
     const query = new URLSearchParams(payload);
     return this.request<SourceTicker>(
       `/api/v1/data-sources/${sourceId}/quote?${query}`,
+    );
+  }
+
+  sourceHistory(
+    sourceId: string,
+    payload: {
+      market: string;
+      exchange: string;
+      symbol: string;
+      trading_date: string;
+    },
+  ): Promise<SourceHistory> {
+    const query = new URLSearchParams(payload);
+    return this.request<SourceHistory>(
+      `/api/v1/data-sources/${sourceId}/history?${query}`,
     );
   }
 

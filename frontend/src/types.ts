@@ -55,6 +55,29 @@ export type SourceTicker = {
   provenance_id: string;
 };
 
+export type SourceHistoryBar = {
+  trading_date: string;
+  open: string;
+  high: string;
+  low: string;
+  close: string;
+  volume: string;
+  turnover: string;
+  trading_currency: string;
+  provider: string;
+  provider_code: string;
+  provenance_id: string;
+};
+
+export type SourceHistory = {
+  source_id: string;
+  market: string;
+  exchange: string;
+  provider_code: string;
+  canonical_asset_id: string;
+  bars: SourceHistoryBar[];
+};
+
 export interface AssetIdentity {
   market: string;
   asset_type: string;

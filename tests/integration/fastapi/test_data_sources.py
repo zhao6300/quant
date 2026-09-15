@@ -140,3 +140,75 @@ def test_source_quote_endpoint_exposes_daily_bar_fields() -> None:
         "turnover",
         "trading_currency",
     }
+
+
+def test_source_history_endpoint_exposes_multiple_daily_bars() -> None:
+    @dataclass(frozen=True)
+    class _FakeHistoryPreview:
+        source_id: str
+        market: str
+        exchange: str
+        canonical_asset_id: str
+        provider_code: str
+        observations: tuple[DailyBar, ...]
+
+    class _FakeHistoryService:
+        def history(self, command):
+            assert command.source_id == "stooq"
+            assert command.provider_code == "AAPL"
+            assert command.limit == 2
+            return _FakeHistoryPreview(
+                source_id=command.source_id,
+                market=command.market,
+                exchange=command.exchange,
+                canonical_asset_id=command.canonical_asset_id,
+                provider_code=command.provider_code,
+                observations=(
+                    DailyBar(
+                        canonical_asset_id=command.canonical_asset_id,
+                        provider_code=command.provider_code,
+                        trading_date=command.start_date,
+                        open=Decimal("100"),
+                        high=Decimal("101"),
+                        low=Decimal("99"),
+                        close=Decimal("100.5"),
+                        volume=Decimal("1000"),
+                        turnover=Decimal("100500"),
+                        trading_currency="CNY",
+                        provider_available_at=datetime(2026, 9, 14, tzinfo=UTC),
+                        retrieved_at=datetime(2026, 9, 14, tzinfo=UTC),
+                        provider="stooq",
+                        provenance_id="prov-1",
+                    ),
+                    DailyBar(
+                        canonical_asset_id=command.canonical_asset_id,
+                        provider_code=command.provider_code,
+                        trading_date=command.end_date,
+                        open=Decimal("101"),
+                        high=Decimal("102"),
+                        low=Decimal("100"),
+                        close=Decimal("101.5"),
+                        volume=Decimal("1200"),
+                        turnover=Decimal("120000"),
+                        trading_currency="CNY",
+                        provider_available_at=datetime(2026, 9, 15, tzinfo=UTC),
+                        retrieved_at=datetime(2026, 9, 15, tzinfo=UTC),
+                        provider="stooq",
+                        provenance_id="prov-2",
+                    ),
+                ),
+            )
+
+    app.dependency_overrides[get_source_ingestion_service] = (lambda: _FakeHistoryService())
+    try:
+        with TestClient(app) as client:
+            response = client.get(
+                "/api/v1/data-sources/stooq/history"
+                "?market=A_SHARE&exchange=SSE&symbol=AAPL&trading_date=2026-09-14&limit=2"
+            )
+    finally:
+        app.dependency_overrides.pop(get_source_ingestion_service, None)
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert len(payload["bars"]) == 2

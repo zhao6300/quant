@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
 
 from mmqp.adapters.data_connectors.base import (
     DailyBarConnector,
@@ -43,6 +43,29 @@ class SourceDailyBarPreview:
     canonical_asset_id: str
     provider_code: str
     observation: DailyBar
+
+
+@dataclass(frozen=True, slots=True)
+class SourceDailyBarHistoryCommand:
+    source_id: str
+    market: str
+    exchange: str
+    canonical_asset_id: str
+    provider_code: str
+    start_date: date
+    end_date: date
+    limit: int
+
+
+@dataclass(frozen=True, slots=True)
+class SourceDailyBarHistoryPreview:
+    source_id: str
+    market: str
+    exchange: str
+    canonical_asset_id: str
+    provider_code: str
+    observations: tuple[DailyBar, ...]
+    failures: tuple[object, ...]
 
 
 class SourceDailyBarIngestionService:
@@ -100,6 +123,43 @@ class SourceDailyBarIngestionService:
             observation=normalized,
             canonical_asset_id=request.canonical_asset_id,
             provider_code=request.provider_code,
+        )
+
+    def history(self, request: SourceDailyBarHistoryCommand) -> SourceDailyBarHistoryPreview:
+        connector = self._connectors.get(request.source_id)
+        if connector is None:
+            raise ProviderCategorizedError(
+                category="unavailable",
+                provider_name=request.source_id,
+                request_category="daily-bar",
+                status=404,
+                retry="never",
+            )
+        observations: list[DailyBar] = []
+        failures: list[object] = []
+        seen_dates: set[date] = set()
+        current_date = request.end_date
+        while current_date >= request.start_date and len(observations) < request.limit:
+            try:
+                normalized = connector.fetch(
+                    provider_code=request.provider_code,
+                    trading_date=current_date,
+                )
+                if normalized.trading_date not in seen_dates:
+                    seen_dates.add(normalized.trading_date)
+                    observations.append(self._observation(request, normalized))
+            except ProviderCategorizedError as error:
+                failures.append(error)
+            current_date -= timedelta(days=1)
+        observations.reverse()
+        return SourceDailyBarHistoryPreview(
+            source_id=request.source_id,
+            market=request.market,
+            exchange=request.exchange,
+            canonical_asset_id=request.canonical_asset_id,
+            provider_code=request.provider_code,
+            observations=tuple(observations),
+            failures=tuple(failures),
         )
 
     @staticmethod

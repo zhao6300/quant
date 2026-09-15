@@ -13,6 +13,7 @@ import type {
   Workspace,
   DataSource,
   SourceTicker,
+  SourceHistoryBar,
 } from "./types";
 
 const client = new ApiClient();
@@ -194,6 +195,9 @@ function App() {
   const [quote, setQuote] = useState<SourceTicker | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
   const [quoteError, setQuoteError] = useState<string | null>(null);
+  const [quoteHistory, setQuoteHistory] = useState<SourceHistoryBar[] | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -205,6 +209,7 @@ function App() {
   const activeSource =
     sources?.find((source) => source.id === activeSourceId) ?? sources?.[0];
   const autoQuoteKeyRef = useRef("");
+  const readHistoryRef = useRef("");
 
   const setSourceFocus = useCallback(
     (source: DataSource) => {
@@ -218,6 +223,40 @@ function App() {
       setActivePageId("quote");
     },
     [selectedMarketId],
+  );
+
+  const readSourceHistory = useCallback(
+    async (days: number) => {
+      const requestKey = [activeSourceId, selectedMarketId, symbol, quoteDate, days].join("|");
+      if (readHistoryRef.current === requestKey) return;
+      readHistoryRef.current = requestKey;
+      setHistoryLoading(true);
+      setHistoryError(null);
+      setQuoteHistory(null);
+      try {
+        const result = await client.sourceHistory(activeSourceId, {
+          market: activeMarket.market,
+          exchange: activeMarket.exchange,
+          symbol,
+          trading_date: quoteDate,
+        });
+        setQuoteHistory(result.bars);
+        setHistoryError(null);
+      } catch (error) {
+        setQuoteHistory(null);
+        setHistoryError(error instanceof Error ? error.message : "读取历史失败。");
+      } finally {
+        setHistoryLoading(false);
+      }
+    },
+    [
+      activeSourceId,
+      activeMarket.exchange,
+      activeMarket.market,
+      quoteDate,
+      selectedMarketId,
+      symbol,
+    ],
   );
 
   const readSourceQuote = useCallback(async () => {
@@ -940,6 +979,68 @@ function App() {
                   </p>
                 </div>
               )}
+              <section className="quote-history glass">
+                <div className="quote-history-head">
+                  <div>
+                    <span>历史 K线</span>
+                    <strong>{quoteHistory ? `${quoteHistory.length} 个交易日` : "日线"}</strong>
+                  </div>
+                  <div className="history-periods">
+                    <button
+                      data-testid="history-period-5d"
+                      className="history-period"
+                      type="button"
+                      onClick={() => void readSourceHistory(5)}
+                    >
+                      5D
+                    </button>
+                    <button
+                      data-testid="history-period-30d"
+                      className="history-period"
+                      type="button"
+                      onClick={() => void readSourceHistory(30)}
+                    >
+                      30D
+                    </button>
+                    <button
+                      data-testid="history-period-60d"
+                      className="history-period"
+                      type="button"
+                      onClick={() => void readSourceHistory(60)}
+                    >
+                      60D
+                    </button>
+                    <button
+                      data-testid="history-period-120d"
+                      className="history-period"
+                      type="button"
+                      onClick={() => void readSourceHistory(120)}
+                    >
+                      120D
+                    </button>
+                  </div>
+                  <button className="primary-button" type="button" onClick={() => void readSourceHistory(5)}>
+                    读取 K线
+                  </button>
+                </div>
+                {historyError && <pre className="error-banner">{historyError}</pre>}
+                {quoteHistory && quoteHistory.length > 0 ? (
+                  <div className="quote-history-grid">
+                    {quoteHistory.map((bar) => (
+                      <article className="history-bar" key={bar.trading_date}>
+                        <span>{bar.trading_date}</span>
+                        <strong>{quoteNumber(bar.close)}</strong>
+                        <small>{bar.trading_currency}</small>
+                      </article>
+                    ))}
+                  </div>
+                ) : (
+                  <div className={`quote-history-empty ${historyError ? "failed" : ""}`}>
+                    <strong>{historyLoading ? "正在读取历史" : "暂无历史数据"}</strong>
+                    <p>点击上方周期按钮，读取所选数据源的历史日线。</p>
+                  </div>
+                )}
+              </section>
             </section>
           </div>
         )}
