@@ -226,6 +226,32 @@ h2 {
 .stat-card small {
   color: #73757c;
 }
+.workflow-card:hover,
+.workflow-card:focus-visible {
+  transform: translateY(-2px);
+  border-color: rgba(0, 122, 255, 0.48);
+  outline: none;
+}
+.workflow-flow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.workflow-card {
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 26px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.58));
+  box-shadow: 0 20px 60px rgba(40, 56, 82, 0.1);
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  padding: 26px;
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  min-height: 185px;
+  transition: 160ms ease;
+}
 
 .panel-grid {
   display: grid;
@@ -1286,6 +1312,7 @@ select:focus {
 @media (max-width: 1125px) {
   .panel-grid,
   .stat-row,
+  .workflow-flow,
   .market-query,
   .query-form,
   .run-form {
@@ -1305,6 +1332,9 @@ select:focus {
   }
   .quote-history-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .overview-secondary {
+    grid-template-columns: minmax(0, 1fr);
   }
   .rule-grid {
     grid-template-columns: 1fr 1fr;
@@ -1335,6 +1365,7 @@ select:focus {
   }
   .panel-grid,
   .stat-row,
+  .workflow-flow,
   .market-query,
   .query-form,
   .run-form,

@@ -694,7 +694,7 @@ function App() {
 
         {activePageId === "overview" && (
           <section className="overview-shelf">
-            <h2 id="page-title-overview">平台状态</h2>
+            <h2 id="page-title-overview">研究控制台</h2>
             <div className="stat-row">
               <article className="stat-card glass">
                 <span>工作区</span>
@@ -720,12 +720,44 @@ function App() {
               </article>
             </div>
 
-            <div className="panel-grid">
+            <section className="workflow-flow">
+              {[
+                {
+                  id: "data",
+                  title: "准备研究数据",
+                  body: "先查询本地快照，确认资产、日K线与基本面输入。",
+                  action: "进入数据层",
+                  badge: "01",
+                },
+                {
+                  id: "quote",
+                  title: "查看市场行情",
+                  body: "用行情源校准当前市场状态和历史价格结构。",
+                  action: "进入行情终端",
+                  badge: "02",
+                },
+                {
+                  id: "backtest",
+                  title: "提交研究运行",
+                  body: "基于固定版本生成科研模拟回执，不发送真实订单。",
+                  action: "进入研究运行",
+                  badge: "03",
+                },
+              ].map((step) => (
+                <button type="button" key={step.id} className="workflow-card glass" onClick={() => setActivePageId(step.id as NavigationId)}>
+                  <span>{step.badge}</span>
+                  <strong>{step.title}</strong>
+                  <small>{step.body}</small>
+                  <em>{step.action}</em>
+                </button>
+              ))}
+            </section>
+            <div className="panel-grid overview-secondary">
               <section className="glass card">
                 <div className="card-head">
                   <div>
-                    <h2>新建工作区</h2>
-                    <p>工作区使用本地 SQLite、不可变对象存储和内容清单。</p>
+                    <h2>工作区准备</h2>
+                    <p>使用本地 SQLite、不可变对象存储和内容清单。</p>
                   </div>
                 </div>
                 <div className="form-grid">
@@ -785,8 +817,8 @@ function App() {
               <section className="glass card quick-start-card">
                 <div className="card-head">
                   <div>
-                    <h2>快速开始</h2>
-                    <p>直接进入行情、数据或研究运行。</p>
+                    <h2>研究入口</h2>
+                    <p>按研究顺序进入数据、行情或运行层。</p>
                   </div>
                 </div>
                 <div className="quick-actions">
