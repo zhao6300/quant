@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator, Callable, Generator
 from contextlib import asynccontextmanager
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 from typing import Annotated, Any, Literal
@@ -15,7 +15,11 @@ from pydantic import BaseModel, Field
 
 from mmqp import PLATFORM_VERSION
 from mmqp.adapters.data_connectors.registry import daily_bar_connectors
-from mmqp.adapters.source_ingestion import SourceDailyBarCommand, SourceDailyBarIngestionService
+from mmqp.adapters.source_ingestion import (
+    SourceDailyBarCommand,
+    SourceDailyBarHistoryCommand,
+    SourceDailyBarIngestionService,
+)
 from mmqp.adapters.sqlite.asset_repository import SqliteAssetRegistryRepository
 from mmqp.adapters.sqlite.baselines import seed_market_baseline
 from mmqp.adapters.sqlite.calendars import (
@@ -783,6 +787,55 @@ def get_source_quote(
         "retrieved_at": observation.retrieved_at.isoformat(),
         "provider": observation.provider,
         "provenance_id": observation.provenance_id,
+    }
+
+
+@app.get("/api/v1/data-sources/{source_id}/history")
+def get_source_history(
+    source_id: str,
+    market: str,
+    exchange: str,
+    symbol: str,
+    trading_date: date,
+    service: Annotated[
+        SourceDailyBarIngestionService, Depends(get_source_ingestion_service)
+    ],
+    limit: int = 20,
+) -> dict[str, Any]:
+    preview = service.history(
+        SourceDailyBarHistoryCommand(
+            source_id=source_id,
+            market=market,
+            exchange=exchange,
+            canonical_asset_id=f"ASSET-{source_id}:{symbol}",
+            provider_code=symbol,
+            start_date=trading_date - timedelta(days=29),
+            end_date=trading_date,
+            limit=limit,
+        )
+    )
+    return {
+        "source_id": preview.source_id,
+        "market": preview.market.upper(),
+        "exchange": preview.exchange.upper(),
+        "provider_code": preview.provider_code,
+        "canonical_asset_id": preview.canonical_asset_id,
+        "bars": [
+            {
+                "trading_date": observation.trading_date.isoformat(),
+                "open": str(observation.open),
+                "high": str(observation.high),
+                "low": str(observation.low),
+                "close": str(observation.close),
+                "volume": str(observation.volume),
+                "turnover": str(observation.turnover),
+                "trading_currency": observation.trading_currency,
+                "provider": observation.provider,
+                "provider_code": observation.provider_code,
+                "provenance_id": observation.provenance_id,
+            }
+            for observation in preview.observations
+        ],
     }
 
 
