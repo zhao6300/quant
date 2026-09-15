@@ -74,7 +74,7 @@ fi
 
 if [[ "$mode" == "background" ]]; then
   backend_log="/tmp/mmqp-${backend_port}.log"
-  nohup .venv/bin/uvicorn mmqp.adapters.fastapi.app:app --host "$backend_host" --port "$backend_port" >"$backend_log" 2>&1 &
+  nohup uv run uvicorn mmqp.adapters.fastapi.app:app --host "$backend_host" --port "$backend_port" >"$backend_log" 2>&1 &
   backend_pid=$!
 
   echo "platform pid: $backend_pid [log: $backend_log]"
@@ -93,7 +93,7 @@ cleanup() {
 
 trap cleanup EXIT
 
-.venv/bin/uvicorn mmqp.adapters.fastapi.app:app --host "$backend_host" --port "$backend_port" &
+uv run uvicorn mmqp.adapters.fastapi.app:app --host "$backend_host" --port "$backend_port" &
 BACKEND_PID=$!
 
 echo "platform: http://127.0.0.1:$backend_port"
