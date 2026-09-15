@@ -10,6 +10,7 @@ from mmqp.adapters.data_connectors.package_sources import (
     BaoStockDailyBarConnector,
 )
 from mmqp.adapters.data_connectors.sec_edgar import SECEDGARConnector
+from mmqp.adapters.data_connectors.sina_finance import SinaFinanceDailyBarConnector
 from mmqp.adapters.data_connectors.source_connectors import FREDObservationsConnector
 from mmqp.adapters.data_connectors.stooq import StooqDailyBarConnector
 from mmqp.adapters.data_connectors.yahoo import YahooFinanceDailyBarConnector
@@ -17,6 +18,7 @@ from mmqp.adapters.data_connectors.yahoo import YahooFinanceDailyBarConnector
 CONNECTED_DAILY_BAR_SOURCES: tuple[str, ...] = (
     "stooq",
     "yahoo-finance",
+    "sina-finance",
     "akshare",
     "baostock",
     "tushare",
@@ -40,6 +42,7 @@ def daily_bar_endpoint_connectors(transport: HTTPTransport | None = None) -> dic
         {
             "stooq": StooqDailyBarConnector(transport=selected),
             "yahoo-finance": YahooFinanceDailyBarConnector(transport=selected),
+            "sina-finance": SinaFinanceDailyBarConnector(transport=selected),
         }
     )
     return connectors

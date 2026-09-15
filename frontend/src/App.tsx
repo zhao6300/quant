@@ -139,9 +139,12 @@ function quoteNumber(value: string): string {
     : value;
 }
 
-function preferredDailyBarSource(sources: DataSource[] | null | undefined) {
+function preferredDailyBarSource(
+  sources: DataSource[] | null | undefined,
+  marketId: string = "a-share",
+) {
   const preferred =
-    sources?.find((source) => source.id === "yahoo-finance") ??
+    sources?.find((source) => source.id === (marketId === "a-share" ? "sina-finance" : "yahoo-finance")) ??
     sources?.find((source) => source.category === "market");
   return preferred ?? null;
 }
@@ -186,7 +189,7 @@ function App() {
   const [runError, setRunError] = useState<string | null>(null);
   const [runSubmitting, setRunSubmitting] = useState(false);
   const [activeSourceId, setActiveSourceId] = useState<string>(
-    preferredDailyBarSource(undefined)?.id ?? "yahoo-finance",
+    preferredDailyBarSource(undefined)?.id ?? "sina-finance",
   );
   const [symbol, setSymbol] = useState<string>(defaultMarketSymbol("a-share"));
   const [stockChoices, setStockChoices] = useState<StockChoice[]>([]);
@@ -430,10 +433,10 @@ function App() {
   }, [activePageId, activeMarket.market, stockSearch]);
 
   useEffect(() => {
-    const preferred = preferredDailyBarSource(sources);
+    const preferred = preferredDailyBarSource(sources, selectedMarketId);
     if (!preferred || preferred.id === activeSourceId) return;
     setActiveSourceId(preferred.id);
-  }, [activeSourceId, sources]);
+  }, [activeSourceId, sources, selectedMarketId]);
 
   const evaluate = useCallback(async () => {
     const isActive = activeMarket.market === "A_SHARE";
@@ -1059,6 +1062,14 @@ function App() {
                 </div>
               </div>
                   {quoteError && <pre className="error-banner">{quoteError}</pre>}
+                  {quoteError && (activeSource?.usage.required_env.length ?? 0) > 0 && (
+                    <div className="quote-note">
+                      <strong>缺少配置</strong>
+                      <span>
+                        {activeSource?.usage.required_env.join(" · ")}
+                      </span>
+                    </div>
+                  )}
                   {quoteFallback && (
                     <div className="quote-note">
                       <strong>行情回退</strong>
@@ -1178,6 +1189,12 @@ function App() {
                   </button>
                 </div>
                 {historyError && <pre className="error-banner">{historyError}</pre>}
+                {historyError && (activeSource?.usage.required_env.length ?? 0) > 0 && (
+                  <div className="quote-note">
+                    <strong>缺少配置</strong>
+                    <span>{activeSource?.usage.required_env.join(" · ")}</span>
+                  </div>
+                )}
                 {historyFallback && (
                   <div className="quote-note">
                     <strong>历史回退</strong>
@@ -1210,14 +1227,13 @@ function App() {
             <div className="card-head">
               <h2>目录与接入状态</h2>
               <p>
-                内置 19 个免费/本地研究源目录；点击行情源卡片进入独立行情快照页。
+                内置免费/本地研究源目录；点击行情源卡片进入独立行情快照页。
               </p>
               <p className="source-footnote">
-                {sources?.filter(
+                已接入 {sources?.filter(
                   (source) => source.implementation_status === "connected",
                 ).length ?? 0}{" "}
-                个已接入 ·
-                {sources?.filter(
+                个。仅目录 {sources?.filter(
                   (source) => source.implementation_status === "cataloged",
                 ).length ?? 0}{" "}
                 个仅目录。

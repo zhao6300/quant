@@ -16,6 +16,6 @@ class _FakeHTTPTransport:
 
 
 def test_all_registered_daily_bar_sources_are_listed() -> None:
-    assert len(CONNECTED_DAILY_BAR_SOURCES) == 14
+    assert len(CONNECTED_DAILY_BAR_SOURCES) == 15
     assert set(daily_bar_endpoint_connectors()).issubset(set(CONNECTED_DAILY_BAR_SOURCES))
     assert CONNECTED_FUNDAMENTAL_FACT_SOURCES == ("sec-edgar", "fred")
