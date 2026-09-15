@@ -438,6 +438,12 @@ function App() {
     setActiveSourceId(preferred.id);
   }, [activeSourceId, sources, selectedMarketId]);
 
+  useEffect(() => {
+    if (quote && !quoteHistory && !historyLoading) {
+      void readSourceHistory(5);
+    }
+  }, [quote, quoteHistory, readSourceHistory, historyLoading]);
+
   const evaluate = useCallback(async () => {
     const isActive = activeMarket.market === "A_SHARE";
     setEvaluation(
@@ -1205,9 +1211,31 @@ function App() {
                   <div className="quote-history-grid">
                     {quoteHistory.map((bar) => (
                       <article className="history-bar" key={bar.trading_date}>
-                        <span>{bar.trading_date}</span>
-                        <strong>{quoteNumber(bar.close)}</strong>
-                        <small>{bar.trading_currency}</small>
+                        <div className="history-bar-head">
+                          <span>{bar.trading_date}</span>
+                          <strong>{quoteNumber(bar.close)}</strong>
+                        </div>
+                        <dl className="history-facts">
+                          <div>
+                            <dt>开</dt>
+                            <dd>{quoteNumber(bar.open)}</dd>
+                          </div>
+                          <div>
+                            <dt>高</dt>
+                            <dd>{quoteNumber(bar.high)}</dd>
+                          </div>
+                          <div>
+                            <dt>低</dt>
+                            <dd>{quoteNumber(bar.low)}</dd>
+                          </div>
+                          <div>
+                            <dt>量</dt>
+                            <dd>{quoteNumber(bar.volume)}</dd>
+                          </div>
+                        </dl>
+                        <small>
+                          {bar.provider} · {bar.trading_currency}
+                        </small>
                       </article>
                     ))}
                   </div>
