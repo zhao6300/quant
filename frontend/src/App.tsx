@@ -185,6 +185,7 @@ function App() {
   const [orderPrice, setOrderPrice] = useState("10.017");
   const [referencePrice, setReferencePrice] = useState("10.00");
   const [evaluation, setEvaluation] = useState<EvaluatedTrade | null>(null);
+  const [evaluationError, setEvaluationError] = useState<string | null>(null);
   const [path, setPath] = useState("");
   const [datasetName, setDatasetName] = useState<QueryDataset>("ASSET_MASTER");
   const [queryField, setQueryField] = useState("asset_type");
@@ -623,21 +624,27 @@ function App() {
   }, [quote, quoteHistory, readSourceHistory, historyDays, historyLoading]);
 
   const evaluate = useCallback(async () => {
-    const isActive = activeMarket.market === "A_SHARE";
-    setEvaluation(
-      await client.evaluateTrade({
+    try {
+      const isActive = activeMarket.market === "A_SHARE";
+      const result = await client.evaluateTrade({
         market: activeMarket.market,
         exchange: activeMarket.exchange,
         asset_type: "EQUITY",
         trade_date: effectiveDate || new Date().toLocaleDateString("en-CA"),
+        side: "BUY",
         requested_quantity: orderQuantity,
         requested_price: orderPrice,
         reference_price: isActive ? referencePrice : undefined,
         market_data_price_limit_percent: isActive ? referencePrice : undefined,
         market_data_price_band_percent: isActive ? undefined : referencePrice,
         sellable_quantity: orderQuantity,
-      }),
-    );
+      });
+      setEvaluation(result);
+      setEvaluationError(null);
+    } catch (cause) {
+      setEvaluation(null);
+      setEvaluationError(cause instanceof Error ? cause.message : "规则评估失败。");
+    }
   }, [
     activeMarket.exchange,
     activeMarket.market,
@@ -676,9 +683,9 @@ function App() {
       });
       setQueryResult(result);
       setQueryError(null);
-    } catch {
+    } catch (cause) {
       setQueryResult(null);
-      setQueryError("查询失败。");
+      setQueryError(cause instanceof Error ? cause.message : "查询失败。");
     }
   }, [datasetName, queryField, queryValue]);
 
@@ -1984,6 +1991,7 @@ function App() {
             )}
 
             {marketError && <pre className="error-banner">{marketError}</pre>}
+            {evaluationError && <pre className="error-banner">{evaluationError}</pre>}
             </div>
           </section>
         )}

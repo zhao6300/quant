@@ -25,6 +25,39 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
 export class ApiClient {
   constructor(private readonly baseUrl: string = API_BASE_URL) {}
 
+  private apiErrorMessage(response: Response, rawMessage: string): string {
+    try {
+      const payload = JSON.parse(rawMessage) as Record<string, unknown>;
+      if (typeof payload.detail === "string") return payload.detail;
+      if (Array.isArray(payload.detail)) {
+        const details = payload.detail.map((item) => {
+          const detail = item as {
+            field?: unknown;
+            message?: unknown;
+            loc?: unknown;
+          };
+          const path = Array.isArray(detail.loc)
+            ? detail.loc.filter((node) => node !== "body")
+            : [];
+          const field =
+            detail.field ?? (path.length ? String(path[path.length - 1]) : "");
+          return field && typeof detail.message === "string"
+            ? `${field}: ${detail.message}`
+            : "提交字段校验失败";
+        });
+        return details.filter(Boolean).join("；") || "提交字段校验失败";
+      }
+      if (payload.status === 400 && typeof payload.title === "string") {
+        const fields = payload.fields as Record<string, unknown> | undefined;
+        const dependent = fields?.provider;
+        return dependent && Array.isArray(dependent)
+          ? `数据源暂时不可用：${dependent.join("、")}`
+          : payload.title;
+      }
+    } catch {}
+    return rawMessage || `${response.status} ${response.statusText}`;
+  }
+
   private async request<T>(path: string, init?: RequestInit): Promise<T> {
     const response = await fetch(`${this.baseUrl}${path}`, {
       headers: { "Content-Type": "application/json" },
@@ -33,7 +66,7 @@ export class ApiClient {
 
     if (!response.ok) {
       const message = await response.text();
-      throw new Error(message || `${response.status} ${response.statusText}`);
+      throw new Error(this.apiErrorMessage(response, message));
     }
 
     return (await response.json()) as T;
@@ -155,6 +188,7 @@ export class ApiClient {
     exchange: string;
     asset_type: string;
     trade_date: string;
+    side: string;
     requested_quantity: string;
     requested_price: string;
     reference_price?: string;
@@ -171,7 +205,13 @@ export class ApiClient {
   queryDataset(request: QueryRequest): Promise<QueryResult> {
     return this.request<QueryResult>("/api/v1/queries/results", {
       method: "POST",
-      body: JSON.stringify({ ...request, limit: 100, offset: 0 }),
+      body: JSON.stringify({
+        snapshot_id: "LIVE",
+        dataset: request.dataset,
+        filters: request.filters,
+        limit: 100,
+        offset: 0,
+      }),
     });
   }
 
