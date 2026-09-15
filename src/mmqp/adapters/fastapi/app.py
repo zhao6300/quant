@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator, Callable, Generator
 from contextlib import asynccontextmanager
+from dataclasses import asdict
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
@@ -31,6 +32,11 @@ from mmqp.adapters.sqlite.market_rules import SqliteMarketRuleRepository
 from mmqp.adapters.sqlite.query_source import SqliteQuerySource
 from mmqp.adapters.sqlite.workspace_repository import SqliteWorkspaceRepository
 from mmqp.application.assets import AssetRegistryService, RegisterAssetRequest
+from mmqp.application.assistant import (
+    AssistantContext,
+    AssistantRequest,
+    ResearchAssistantService,
+)
 from mmqp.application.calendars import CalendarService
 from mmqp.application.ingestion import DataIngestionService
 from mmqp.application.market_rules import MarketRuleService
@@ -121,6 +127,39 @@ async def domain_error_handler(request: Request, exc: DomainError) -> JSONRespon
 class CreateWorkspaceRequest(BaseModel):
     path: str
     display_name: str | None = Field(default=None, min_length=1, max_length=120)
+
+
+class AssistantContextModel(BaseModel):
+    page_id: str = "overview"
+    source_id: str = "sina-finance"
+    source_name: str | None = None
+    market_id: str = "a-share"
+    market: str = "A_SHARE"
+    exchange: str = "SSE"
+    symbol: str = "600000.SS"
+    stock_count: int | None = None
+    trading_date: str | None = None
+    history_days: int = 5
+    dataset_name: str | None = None
+    query_field: str | None = None
+    query_value: str | None = None
+    run_start_date: str | None = None
+    run_end_date: str | None = None
+    base_currency: str = "USD"
+    workspace_count: int | None = None
+    workspace_name: str | None = None
+    workspace_path: str | None = None
+
+
+class AssistantRequestModel(BaseModel):
+    message: str = Field(min_length=1, max_length=1000)
+    context: AssistantContextModel = AssistantContextModel()
+
+
+def _assistant_context_from_model(
+    context: AssistantContextModel,
+) -> AssistantContext:
+    return AssistantContext(**context.model_dump())
 
 
 def get_workspace_repository() -> WorkspaceRepository:
@@ -500,6 +539,33 @@ def list_workspaces(
     repository: Annotated[WorkspaceRepository, Depends(get_workspace_repository)],
 ) -> list[WorkspaceRecord]:
     return repository.list()
+
+
+@app.post("/api/v1/assistant/respond")
+def assistant_respond(request: AssistantRequestModel) -> dict[str, Any]:
+    service = ResearchAssistantService()
+    response = service.respond(
+        AssistantRequest(
+            message=request.message,
+            context=_assistant_context_from_model(request.context),
+        )
+    )
+    return {
+        "answer": response.answer,
+        "mode": response.mode,
+        "provider": response.provider,
+        "context_used": asdict(response.context_used),
+        "actions": [
+            {
+                "kind": action.kind,
+                "title": action.title,
+                "detail": action.detail,
+                "params": action.params,
+                "confirmation_required": action.confirmation_required,
+            }
+            for action in response.actions
+        ],
+    }
 
 
 @app.post("/api/v1/assets", status_code=201)

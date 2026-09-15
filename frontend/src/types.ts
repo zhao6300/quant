@@ -6,6 +6,53 @@ export interface Workspace {
   created_at: string | null;
 }
 
+export type AssistantMode = "deterministic" | "llm";
+
+export type AssistantActionKind =
+  | "goto_data"
+  | "goto_quote"
+  | "goto_backtest"
+  | "goto_overview"
+  | "goto_sources";
+
+export interface AssistantAction {
+  kind: AssistantActionKind;
+  title: string;
+  detail: string;
+  params: Record<string, unknown>;
+  confirmation_required: boolean;
+}
+
+export interface AssistantContextPayload {
+  page_id: string;
+  source_id: string;
+  source_name?: string | null;
+  market_id: string;
+  market: string;
+  exchange: string;
+  symbol: string;
+  stock_count?: number;
+  trading_date?: string | null;
+  history_days: number;
+  dataset_name?: string | null;
+  query_field?: string | null;
+  query_value?: string | null;
+  run_start_date?: string | null;
+  run_end_date?: string | null;
+  base_currency: string;
+  workspace_count?: number;
+  workspace_name?: string | null;
+  workspace_path?: string | null;
+}
+
+export interface AssistantResponse {
+  answer: string;
+  mode: AssistantMode;
+  provider: string;
+  context_used: AssistantContextPayload;
+  actions: AssistantAction[];
+}
+
 export interface PlatformStatus {
   platform_version: string;
   workspace_count: number;

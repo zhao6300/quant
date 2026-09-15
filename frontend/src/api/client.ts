@@ -1,4 +1,7 @@
 import type {
+  AssistantContextPayload,
+  AssistantMode,
+  AssistantResponse,
   EvaluatedTrade,
   AssetVersion,
   MarketRuleProfile,
@@ -89,6 +92,17 @@ export class ApiClient {
 
   workspaces(): Promise<Workspace[]> {
     return this.request<Workspace[]>("/api/v1/workspaces");
+  }
+
+  assistantRespond(payload: {
+    message: string;
+    context: AssistantContextPayload;
+    mode: AssistantMode;
+  }): Promise<AssistantResponse> {
+    return this.request<AssistantResponse>("/api/v1/assistant/respond", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
   }
 
   registerAsset(asset: {

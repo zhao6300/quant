@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiClient } from "./api/client";
 import type {
+  AssistantAction,
+  AssistantMode,
+  AssistantResponse,
+  AssistantContextPayload,
   EvaluatedTrade,
   MarketRuleProfile,
   PlatformStatus,
@@ -18,6 +22,15 @@ import type {
 } from "./types";
 
 const client = new ApiClient();
+
+function maybeValueFrom(params: Record<string, unknown>, key: string) {
+  return typeof params[key] === "string" ? params[key] : undefined;
+}
+
+function maybeNumberFrom(params: Record<string, unknown>, key: string) {
+  return typeof params[key] === "number" ? params[key] : undefined;
+}
+
 
 const MARKET_OPTIONS = [
   { id: "a-share", label: "A股", market: "A_SHARE", exchange: "SSE" },
@@ -219,6 +232,13 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [activePageId, setActivePageId] = useState<NavigationId>("overview");
+  const [assistantMode, setAssistantMode] = useState<AssistantMode>("deterministic");
+  const [assistantPanelOpen, setAssistantPanelOpen] = useState(false);
+  const [assistantQuestion, setAssistantQuestion] = useState("");
+  const [assistantResponse, setAssistantResponse] = useState<AssistantResponse | null>(null);
+  const [assistantMessage, setAssistantMessage] = useState("");
+  const [assistantError, setAssistantError] = useState<string | null>(null);
+  const [assistantBusy, setAssistantBusy] = useState(false);
 
   const activeMarket = marketById(selectedMarketId);
   const activeNavigation =
@@ -227,6 +247,7 @@ function App() {
     sources?.find((source) => source.id === activeSourceId) ?? sources?.[0];
   const autoQuoteKeyRef = useRef("");
   const readHistoryRef = useRef("");
+  const assistantDataTriggerRef = useRef(false);
 
   const setSourceFocus = useCallback(
     (source: DataSource) => {
@@ -250,6 +271,120 @@ function App() {
       setActivePageId("quote");
     },
     [quoteDate, selectedMarketId],
+  );
+
+  const assistantContextPayload: AssistantContextPayload = {
+    page_id: activePageId,
+    source_id: activeSourceId,
+    source_name: activeSource?.display_name,
+    market_id: selectedMarketId,
+    market: activeMarket.market,
+    exchange: activeMarket.exchange,
+    symbol,
+    stock_count: stockChoices.length,
+    trading_date: quoteDate,
+    history_days: historyDays,
+    dataset_name: datasetName,
+    query_field: queryField,
+    query_value: queryValue,
+    run_start_date: runWindowStart,
+    run_end_date: runWindowEnd,
+    base_currency: runBaseCurrency,
+    workspace_count: workspaces.length,
+    workspace_path: path,
+  };
+
+  const askAssistant = useCallback(async (message: string) => {
+    if (!message.trim()) {
+      setAssistantError("请输入问题。");
+      return;
+    }
+    setAssistantBusy(true);
+    setAssistantError(null);
+    const context = assistantContextPayload;
+    try {
+      const result = await client.assistantRespond({
+        message,
+        context,
+        mode: assistantMode,
+      });
+      setAssistantResponse(result);
+      setAssistantPanelOpen(true);
+      setAssistantMessage(message);
+    } catch {
+      setAssistantResponse(null);
+      setAssistantError("助手暂时不可用，请稍后再试。");
+    } finally {
+      setAssistantBusy(false);
+    }
+  }, [assistantContextPayload, assistantMode]);
+
+  const applyAssistantAction = useCallback(
+    (action: AssistantAction | null) => {
+      if (!action) return;
+      const actionParams = action.params as Record<string, unknown>;
+      const maybe = (key: string) => maybeValueFrom(actionParams, key);
+      const perhapsNumber = (key: string) => maybeNumberFrom(actionParams, key);
+
+      if (action.kind === "goto_data") {
+        setDatasetName(
+          (maybe("dataset") ?? "ASSET_MASTER") as QueryDataset,
+        );
+        setQueryField(maybe("field") ?? "");
+        setQueryValue(maybe("value") ?? "");
+        setActivePageId("data");
+        assistantDataTriggerRef.current = true;
+        return;
+      }
+
+      if (action.kind === "goto_quote") {
+        setActiveSourceId(maybe("source_id") ?? activeSourceId);
+        setSymbol(maybe("symbol") ?? symbol);
+        setQuoteDate(maybe("trading_date") ?? quoteDate);
+        setHistoryDays(perhapsNumber("history_days") ?? historyDays);
+        setQuote(null);
+        setQuoteError(null);
+        setQuoteFallback(null);
+        setQuoteHistory(null);
+        setHistoryFallback(null);
+        autoQuoteKeyRef.current = [
+          maybe("source_id") ?? activeSourceId,
+          selectedMarketId,
+          maybe("symbol") ?? symbol,
+          maybe("trading_date") ?? quoteDate,
+        ].join("|");
+        setActivePageId("quote");
+        return;
+      }
+
+      if (action.kind === "goto_backtest") {
+        setRunWindowStart(maybe("start_date") ?? "");
+        setRunWindowEnd(maybe("end_date") ?? "");
+        setRunBaseCurrency(maybe("base_currency") ?? "USD");
+        setRunError(null);
+        setActivePageId("backtest");
+        return;
+      }
+
+      if (action.kind === "goto_sources") {
+        setActivePageId("sources");
+        return;
+      }
+
+      setActivePageId("overview");
+      if (maybe("focus") === "workspace") {
+        window.setTimeout(() => {
+          document.querySelector<HTMLInputElement>(".workspace-path-input")?.focus();
+        }, 0);
+      }
+    },
+    [
+      activeSourceId,
+      historyDays,
+      quoteDate,
+      selectedMarketId,
+      symbol,
+    ],
   );
 
   const readSourceHistory = useCallback(
@@ -547,6 +682,12 @@ function App() {
     }
   }, [datasetName, queryField, queryValue]);
 
+  useEffect(() => {
+    if (!assistantDataTriggerRef.current) return;
+    assistantDataTriggerRef.current = false;
+    void runQuery();
+  }, [activePageId, runQuery]);
+
 
   const submitRun = useCallback(async () => {
     if (!runWindowStart || !runWindowEnd) {
@@ -677,6 +818,98 @@ function App() {
       </aside>
 
       <main className="content">
+        <section className="assistant-toolbar glass">
+          <form
+            className="assistant-form"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void askAssistant(assistantQuestion);
+            }}
+          >
+            <button className="assistant-badge" type="button" onClick={() => setAssistantPanelOpen((open) => !open)}>
+              <strong>MMQP Copilot</strong>
+              <span>{assistantMode === "deterministic" ? "意图助手" : "LLM"}</span>
+            </button>
+            <input
+              data-testid="assistant-input"
+              type="text"
+              placeholder="例如：查看浦发银行最近30天行情，并告诉我下一步"
+              aria-label="研究助手"
+              value={assistantQuestion}
+              onChange={(event) => setAssistantQuestion(event.target.value)}
+            />
+            {assistantMode === "deterministic" && (
+              <select
+                aria-label="助手模式"
+                value={assistantMode}
+                onChange={(event) => setAssistantMode(event.target.value as AssistantMode)}
+              >
+                <option value="deterministic">实地意图</option>
+                <option value="llm">AI 供应商</option>
+              </select>
+            )}
+            <button
+              className="primary-button"
+              data-testid="assistant-submit"
+              type="submit"
+              disabled={assistantBusy}
+            >
+              {assistantBusy ? "思考中…" : "询问"}
+            </button>
+          </form>
+
+          {assistantPanelOpen && (
+            <div className="assistant-response" data-testid="assistant-response">
+              <div className="assistant-head">
+                <div>
+                  <strong>助手理解</strong>
+                  <span>
+                    页面 {assistantContextPayload.page_id} · {assistantContextPayload.market_id} ·{" "}
+                    {assistantContextPayload.symbol}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAssistantQuestion("");
+                    setAssistantMessage("");
+                    setAssistantError(null);
+                  }}
+                >
+                  清空
+                </button>
+              </div>
+
+              <p>
+                {assistantMessage ? <span className="assistant-user-message">{assistantMessage}</span> : null}
+                {assistantResponse?.answer ?? assistantError ?? "请输入研究问题。"}
+              </p>
+
+              {assistantResponse?.actions.length ? (
+                <div className="assistant-actions">
+                  {assistantResponse.actions.map((action, index) => (
+                    <button
+                      key={action.kind + String(index)}
+                      className={
+                        action.confirmation_required ? "assistant-action confirm" : "assistant-action"
+                      }
+                      type="button"
+                      onClick={() => applyAssistantAction(action)}
+                    >
+                      <span>{action.confirmation_required ? "写入" : "联动"}</span>
+                      <strong>{action.title}</strong>
+                      <small>{action.detail}</small>
+                      <em>{action.confirmation_required ? "确认执行" : "应用"}</em>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="assistant-actions muted">暂无建议操作</div>
+              )}
+            </div>
+          )}
+        </section>
+
         <header>
           <div>
             <p className="eyebrow">{activeNavigation.subtitle}</p>
@@ -1142,8 +1375,8 @@ function App() {
                         : "等待连接"}
                 </div>
               </div>
-                  {quoteError && <pre className="error-banner">{quoteError}</pre>}
-                  {quoteError && (activeSource?.usage.required_env.length ?? 0) > 0 && (
+              {quoteError && <pre className="error-banner">{quoteError}</pre>}
+              {quoteError && (activeSource?.usage.required_env.length ?? 0) > 0 && (
                     <div className="quote-note">
                       <strong>缺少配置</strong>
                       <span>
