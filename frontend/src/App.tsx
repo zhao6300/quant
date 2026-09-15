@@ -137,6 +137,13 @@ function quoteNumber(value: string): string {
     : value;
 }
 
+function preferredDailyBarSource(sources: DataSource[] | null | undefined) {
+  const preferred =
+    sources?.find((source) => source.id === "yahoo-finance") ??
+    sources?.find((source) => source.category === "market");
+  return preferred ?? null;
+}
+
 function App() {
   const [socialData, setSocialData] = useState("Loading");
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
@@ -176,11 +183,14 @@ function App() {
   );
   const [runError, setRunError] = useState<string | null>(null);
   const [runSubmitting, setRunSubmitting] = useState(false);
-  const [activeSourceId, setActiveSourceId] = useState<string>("yahoo-finance");
+  const [activeSourceId, setActiveSourceId] = useState<string>(
+    preferredDailyBarSource(undefined)?.id ?? "yahoo-finance",
+  );
   const [symbol, setSymbol] = useState<string>(defaultMarketSymbol("a-share"));
   const [quoteDate, setQuoteDate] = useState<string>(
     new Date().toLocaleDateString("en-CA"),
   );
+  const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
   const [quote, setQuote] = useState<SourceTicker | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
   const [quoteError, setQuoteError] = useState<string | null>(null);
@@ -198,6 +208,9 @@ function App() {
 
   const setSourceFocus = useCallback(
     (source: DataSource) => {
+      if (source.category !== "market") {
+        return;
+      }
       setActiveSourceId(source.id);
       setSymbol(defaultMarketSymbol(selectedMarketId));
       setQuote(null);
@@ -216,13 +229,17 @@ function App() {
     setQuoteError(null);
     setQuoteLoading(true);
     try {
-      const quotation = await client.sourceQuote(activeSourceId, {
-        market: activeMarket.market,
-        exchange: activeMarket.exchange,
-        symbol,
-        trading_date: quoteDate,
-      });
+      const quotation = await client.sourceQuote(
+        selectedProvider ?? activeSourceId,
+        {
+          market: activeMarket.market,
+          exchange: activeMarket.exchange,
+          symbol,
+          trading_date: quoteDate,
+        },
+      );
       setQuote(quotation);
+      setSelectedProvider(selectedProvider ?? activeSourceId);
       setQuoteError(null);
     } catch (error) {
       setQuote(null);
@@ -231,7 +248,7 @@ function App() {
       setQuoteLoading(false);
     }
   }, [
-    activeSourceId,
+    selectedProvider,
     activeMarket.exchange,
     activeMarket.market,
     quoteDate,
@@ -258,9 +275,16 @@ function App() {
     quoteDate,
     quoteLoading,
     readSourceQuote,
+    selectedProvider,
     selectedMarketId,
     symbol,
   ]);
+
+  useEffect(() => {
+    const preferred = preferredDailyBarSource(sources);
+    if (!preferred || preferred.id === activeSourceId) return;
+    setActiveSourceId(preferred.id);
+  }, [activeSourceId, sources]);
 
   const evaluate = useCallback(async () => {
     const isActive = activeMarket.market === "A_SHARE";
@@ -766,7 +790,9 @@ function App() {
                       }
                     }}
                   >
-                    {sources?.map((source) => (
+                    {sources
+                      ?.filter((source) => source.category === "market")
+                      .map((source) => (
                       <option key={source.id} value={source.id}>
                         {source.display_name}
                       </option>
@@ -855,7 +881,7 @@ function App() {
                       <small>{quote.trading_currency}</small>
                     </div>
                     <div>
-                      <span>开盘变动</span>
+                      <span>开盘价差</span>
                       <strong>
                         {(
                           ((Number(quote.close) - Number(quote.open)) /
@@ -867,6 +893,12 @@ function App() {
                       <small>{quote.provider}</small>
                     </div>
                   </div>
+                  {quote.trading_date !== quoteDate && (
+                    <div className="quote-note">
+                      <strong>已自动回退</strong>
+                      <span>{quote.trading_date} · 开盘价差仍按当日开盘计算。</span>
+                    </div>
+                  )}
                   <dl className="quote-metrics">
                     <div>
                       <dt>开盘</dt>

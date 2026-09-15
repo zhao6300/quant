@@ -97,6 +97,7 @@ def _daily_bar(
         trading_currency="CNY",
         provider_available_at=datetime.combine(trading_date, time(22, 0), tzinfo=UTC),
         retrieved_at=datetime.now(UTC),
+        as_of=datetime.now(UTC),
         provider=provider,
         provider_code=provider_code,
         provenance_id=_provenance_id(provider, provider_code, trading_date),

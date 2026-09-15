@@ -20,6 +20,7 @@ class NormalizedDailyBar:
     trading_currency: str
     provider_available_at: datetime
     retrieved_at: datetime
+    as_of: datetime
     provider: str
     provider_code: str
     provenance_id: str

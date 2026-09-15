@@ -729,6 +729,24 @@ select:focus {
   letter-spacing: -0.045em;
   overflow-wrap: anywhere;
 }
+.quote-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+  padding: 12px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: rgba(255, 255, 255, 0.05);
+  font-size: 13px;
+}
+.quote-note strong {
+  color: #77e396;
+  white-space: nowrap;
+}
+.quote-note span {
+  color: rgba(222, 234, 255, 0.66);
+}
 .quote-metrics {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

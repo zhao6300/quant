@@ -274,6 +274,7 @@ def _normalized(
         trading_currency=trading_currency,
         provider_available_at=datetime.combine(trading_date, time(22, 0), tzinfo=UTC),
         retrieved_at=datetime.now(UTC),
+        as_of=datetime.now(UTC),
         provider=provider,
         provider_code=provider_code,
         provenance_id=_provenance_id(provider, encoded_code, trading_date),

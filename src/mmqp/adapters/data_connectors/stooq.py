@@ -52,6 +52,7 @@ class StooqDailyBarConnector(DailyBarConnector):
             trading_currency=_stooq_currency(provider_code),
             provider_available_at=datetime.combine(trading_date, time(22, 0), tzinfo=UTC),
             retrieved_at=datetime.now(UTC),
+            as_of=datetime.now(UTC),
             provider=self.provider,
             provider_code=provider_code,
             provenance_id=_provenance_id("stooq", encoded_code, trading_date),
