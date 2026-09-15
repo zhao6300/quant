@@ -38,6 +38,20 @@ export interface DataSource {
   };
 }
 
+export interface StockChoice {
+  symbol: string;
+  name: string;
+  market: string;
+  exchange: string;
+  currency: string;
+}
+
+export interface StockChoices {
+  market: string;
+  query: string;
+  stocks: StockChoice[];
+}
+
 export type SourceTicker = {
   source_id: string;
   provider_code: string;

@@ -14,6 +14,7 @@ import type {
   Workspace,
   SourceTicker,
   SourceHistory,
+  StockChoices,
 } from "../types";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
@@ -78,6 +79,11 @@ export class ApiClient {
     return this.request<SourceHistory>(
       `/api/v1/data-sources/${sourceId}/history?${query}`,
     );
+  }
+
+  stockChoices(market: string, query: string = ""): Promise<StockChoices> {
+    const querystring = new URLSearchParams({ market, query });
+    return this.request<StockChoices>(`/api/v1/stocks?${querystring}`);
   }
 
   workspaces(): Promise<Workspace[]> {

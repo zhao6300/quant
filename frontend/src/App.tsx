@@ -14,6 +14,7 @@ import type {
   DataSource,
   SourceTicker,
   SourceHistoryBar,
+  StockChoice,
 } from "./types";
 
 const client = new ApiClient();
@@ -188,6 +189,10 @@ function App() {
     preferredDailyBarSource(undefined)?.id ?? "yahoo-finance",
   );
   const [symbol, setSymbol] = useState<string>(defaultMarketSymbol("a-share"));
+  const [stockChoices, setStockChoices] = useState<StockChoice[]>([]);
+  const [stockSearch, setStockSearch] = useState("");
+  const [stockLoading, setStockLoading] = useState(false);
+  const [stockError, setStockError] = useState<string | null>(null);
   const [quoteDate, setQuoteDate] = useState<string>(
     new Date().toLocaleDateString("en-CA"),
   );
@@ -226,9 +231,15 @@ function App() {
       setQuoteFallback(null);
       setQuoteHistory(null);
       setHistoryFallback(null);
+      autoQuoteKeyRef.current = [
+        source.id,
+        selectedMarketId,
+        defaultMarketSymbol(selectedMarketId),
+        quoteDate,
+      ].join("|");
       setActivePageId("quote");
     },
-    [selectedMarketId],
+    [quoteDate, selectedMarketId],
   );
 
   const readSourceHistory = useCallback(
@@ -283,8 +294,9 @@ function App() {
     ],
   );
 
-  const readSourceQuote = useCallback(async () => {
-    if (!symbol) {
+  const readSourceQuote = useCallback(async (symbolOverride?: string) => {
+    const requestedSymbol = symbolOverride ?? symbol;
+    if (!requestedSymbol) {
       setQuoteError("请输入标的代码。");
       return;
     }
@@ -298,7 +310,7 @@ function App() {
         {
           market: activeMarket.market,
           exchange: activeMarket.exchange,
-          symbol,
+          symbol: requestedSymbol,
           trading_date: quoteDate,
         },
       );
@@ -311,7 +323,7 @@ function App() {
           const fallback = await client.sourceQuote("yahoo-finance", {
             market: activeMarket.market,
             exchange: activeMarket.exchange,
-            symbol,
+            symbol: requestedSymbol,
             trading_date: quoteDate,
           });
           setQuote(fallback);
@@ -338,6 +350,31 @@ function App() {
     symbol,
   ]);
 
+  const chooseStock = useCallback(
+    (choice: StockChoice) => {
+      setSymbol(choice.symbol);
+      setQuote(null);
+      setQuoteError(null);
+      setQuoteFallback(null);
+      setQuoteHistory(null);
+      setHistoryError(null);
+      setHistoryFallback(null);
+      autoQuoteKeyRef.current = [
+        activeSourceId,
+        selectedMarketId,
+        choice.symbol,
+        quoteDate,
+      ].join("|");
+      void readSourceQuote(choice.symbol);
+    },
+    [
+      activeSourceId,
+      quoteDate,
+      readSourceQuote,
+      selectedMarketId,
+    ],
+  );
+
   useEffect(() => {
     if (activePageId !== "quote" || quoteLoading || quote) return;
     if (activeSource?.category !== "market") return;
@@ -362,6 +399,35 @@ function App() {
     selectedMarketId,
     symbol,
   ]);
+
+  useEffect(() => {
+    if (activePageId !== "quote") return;
+    const controller = new AbortController();
+    const search = stockSearch;
+    setStockChoices([]);
+    setStockLoading(true);
+    const timer = window.setTimeout(() => {
+      client
+        .stockChoices(activeMarket.market, search)
+        .then((result) => {
+          if (!controller.signal.aborted) {
+            setStockChoices(result.stocks);
+            setStockError(null);
+          }
+        })
+        .catch(() => {
+          if (!controller.signal.aborted) setStockError("股票列表不可用。");
+        })
+        .finally(() => {
+          if (!controller.signal.aborted) setStockLoading(false);
+        });
+    }, search ? 180 : 0);
+    return () => {
+      controller.abort();
+      window.clearTimeout(timer);
+      setStockLoading(false);
+    };
+  }, [activePageId, activeMarket.market, stockSearch]);
 
   useEffect(() => {
     const preferred = preferredDailyBarSource(sources);
@@ -852,6 +918,44 @@ function App() {
                 <strong>行情终端</strong>
                 <small>选中数据源后自动读取真实日线</small>
               </div>
+              <section className="stock-picker" aria-label="股票选择">
+                <div className="stock-picker-head">
+                  <strong>股票列表</strong>
+                  <span data-testid="stock-loading">
+                    {stockLoading ? "加载中" : `${stockChoices.length} 只`}
+                  </span>
+                </div>
+                <input
+                  data-testid="stock-search"
+                  className="stock-search"
+                  type="search"
+                  placeholder="搜索代码或名称"
+                  value={stockSearch}
+                  onChange={(event) => setStockSearch(event.target.value)}
+                />
+                {stockError && <pre className="error-banner">{stockError}</pre>}
+                <div className="stock-options" data-testid="stock-options">
+                  {stockChoices.map((choice) => (
+                    <button
+                      data-testid="stock-option"
+                      className={choice.symbol === symbol ? "active" : ""}
+                      type="button"
+                      key={choice.symbol}
+                      onClick={() => chooseStock(choice)}
+                    >
+                      <strong>{choice.symbol}</strong>
+                      <span>{choice.name}</span>
+                      <small>{choice.currency}</small>
+                    </button>
+                  ))}
+                  {!stockLoading && !stockChoices.length && (
+                    <div className="stock-empty">
+                      <strong>没有匹配股票</strong>
+                      <p>调整关键词后继续搜索。</p>
+                    </div>
+                  )}
+                </div>
+              </section>
               <form
                 className="quote-control"
                 onSubmit={(event) => {

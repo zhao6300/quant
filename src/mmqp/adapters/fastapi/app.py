@@ -46,6 +46,7 @@ from mmqp.application.run_submission import (
     RunSubmissionService,
 )
 from mmqp.application.sources import list_data_sources, source_usage_payload
+from mmqp.application.stocks import stock_catalog
 from mmqp.application.workspaces import WorkspaceService
 from mmqp.domain.assets import AssetVersion, ProviderAssetMapping
 from mmqp.domain.calendars import (
@@ -453,6 +454,29 @@ def list_sources() -> list[dict[str, Any]]:
         }
         for source in list_data_sources()
     ]
+
+
+@app.get("/api/v1/stocks")
+def get_stock_choices(
+    market: str,
+    query: str = "",
+    limit: int = 20,
+) -> dict[str, Any]:
+    choices = stock_catalog(market=market, query=query, limit=limit)
+    return {
+        "market": market.upper(),
+        "query": query,
+        "stocks": [
+            {
+                "symbol": choice.symbol,
+                "name": choice.name,
+                "market": choice.market,
+                "exchange": choice.exchange,
+                "currency": choice.currency,
+            }
+            for choice in choices
+        ],
+    }
 
 
 @app.post("/api/v1/workspaces", status_code=201)

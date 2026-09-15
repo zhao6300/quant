@@ -199,7 +199,7 @@ def test_source_history_endpoint_exposes_multiple_daily_bars() -> None:
                 ),
             )
 
-    app.dependency_overrides[get_source_ingestion_service] = (lambda: _FakeHistoryService())
+    app.dependency_overrides[get_source_ingestion_service] = lambda: _FakeHistoryService()
     try:
         with TestClient(app) as client:
             response = client.get(
@@ -212,3 +212,31 @@ def test_source_history_endpoint_exposes_multiple_daily_bars() -> None:
     assert response.status_code == 200
     payload = response.json()
     assert len(payload["bars"]) == 2
+
+
+def test_stock_choices_endpoint_returns_searchable_market_catalog() -> None:
+    with TestClient(app) as client:
+        response = client.get("/api/v1/stocks?market=A_SHARE")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["market"] == "A_SHARE"
+    first = payload["stocks"][0]
+    assert payload["stocks"] and set(first) == {
+        "symbol",
+        "name",
+        "market",
+        "exchange",
+        "currency",
+    }
+
+    with TestClient(app) as client:
+        by_name = client.get("/api/v1/stocks?market=A_SHARE&query=%E8%8C%85").json()
+        by_code = client.get("/api/v1/stocks?market=A_SHARE&query=000001").json()
+        limited = client.get("/api/v1/stocks?market=A_SHARE&limit=2").json()
+        unknown = client.get("/api/v1/stocks?market=UNKNOWN").json()
+
+    assert [choice["name"] for choice in by_name["stocks"]] == ["贵州茅台"]
+    assert [choice["symbol"] for choice in by_code["stocks"]] == ["000001.SZ"]
+    assert len(limited["stocks"]) == 2
+    assert unknown["stocks"] == []

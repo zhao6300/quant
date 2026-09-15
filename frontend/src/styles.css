@@ -653,8 +653,81 @@ select:focus {
   font-size: 12.5px;
   line-height: 1.5;
 }
+.stock-picker {
+  display: grid;
+  gap: 10px;
+}
+.stock-picker-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+}
+.stock-picker-head strong {
+  font-size: 16px;
+  letter-spacing: -0.02em;
+}
+.stock-picker-head span {
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.stock-search {
+  width: 100%;
+}
+.stock-options {
+  max-height: 280px;
+  overflow: auto;
+  display: grid;
+  gap: 8px;
+  padding: 5px;
+  border-radius: 16px;
+  border: 1px solid var(--outline);
+  background: rgba(15, 18, 23, 0.02);
+  scrollbar-width: thin;
+}
+.stock-options button {
+  min-width: 0;
+  padding: 10px 12px;
+  border-radius: 13px;
+  border: 1px solid rgba(15, 18, 23, 0.07);
+  background: rgba(255, 255, 255, 0.72);
+  text-align: left;
+  cursor: pointer;
+  display: grid;
+  gap: 3px;
+  transition: background 180ms ease, transform 180ms ease;
+}
+.stock-options button:hover,
+.stock-options button.active {
+  background: #dce7ff;
+  transform: translateY(-1px);
+}
+.stock-options strong {
+  font-size: 13.5px;
+  letter-spacing: 0.01em;
+}
+.stock-options span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.stock-options small {
+  color: var(--muted);
+  font-size: 11.5px;
+}
+.stock-empty {
+  padding: 14px;
+  display: grid;
+  gap: 5px;
+  color: var(--muted);
+}
+.stock-empty strong {
+  color: var(--ink);
+}
 .quote-stage {
-  min-height: 702px;
+  min-height: 0;
   padding: 30px;
   border-radius: 26px;
   color: #edf3ff;
@@ -791,6 +864,8 @@ select:focus {
 }
 .quote-empty.failed {
   border-color: rgba(255, 59, 48, 0.38);
+  flex: 0;
+  min-height: 0;
 }
 .quote-empty.failed strong {
   color: #ff9c96;
@@ -1039,7 +1114,7 @@ select:focus {
 .quote-history-empty {
   display: grid;
   place-content: center;
-  min-height: 210px;
+  min-height: 140px;
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.6);
   border: 1px dashed rgba(17, 19, 26, 0.12);
