@@ -125,6 +125,12 @@ function marketById(id: string): MarketOption {
   return MARKET_OPTIONS.find((option) => option.id === id) ?? MARKET_OPTIONS[0];
 }
 
+function range(values: number[]): { low: number; high: number } {
+  const valid = values.filter((value) => Number.isFinite(value));
+  if (!valid.length) return { low: 0, high: 0 };
+  return { low: Math.min(...valid), high: Math.max(...valid) };
+}
+
 function defaultMarketSymbol(id: string): string {
   const market = marketById(id);
   if (market.market === "HONG_KONG") return "0700.HK";
@@ -208,6 +214,7 @@ function App() {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState<string | null>(null);
   const [historyFallback, setHistoryFallback] = useState<string | null>(null);
+  const [historyDays, setHistoryDays] = useState(30);
   const [displayName, setDisplayName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -262,6 +269,7 @@ function App() {
             exchange: activeMarket.exchange,
             symbol,
             trading_date: quoteDate,
+            limit: String(days),
           });
           setQuoteHistory(result.bars);
           setHistoryError(null);
@@ -275,6 +283,7 @@ function App() {
             exchange: activeMarket.exchange,
             symbol,
             trading_date: quoteDate,
+            limit: String(days),
           });
           setQuoteHistory(fallback.bars);
           setHistoryError(null);
@@ -352,6 +361,40 @@ function App() {
     quoteDate,
     symbol,
   ]);
+
+  const latestBar = quoteHistory?.at(-1) ?? null;
+  const firstBar = quoteHistory?.[0] ?? null;
+  const latestClose = latestBar ? Number(latestBar.close) : Number.NaN;
+  const windowChange =
+    Number.isFinite(latestClose) && firstBar && Number.isFinite(Number(firstBar.close))
+      ? ((latestClose - Number(firstBar.close)) / Number(firstBar.close)) * 100
+      : Number.NaN;
+  const priceRange = range((quoteHistory ?? []).flatMap((bar) => [Number(bar.high), Number(bar.low)]));
+  const volumePeak = Math.max(
+    ...(quoteHistory?.length ? quoteHistory.map((bar) => Number(bar.volume)) : [0]),
+  );
+  const chartWidth = 840;
+  const chartHeight = 320;
+  const priceTop = 18;
+  const candleBottom = 235;
+  const volumeBottom = 300;
+  const priceSpan = priceRange.high - priceRange.low;
+  const candleX = (index: number) =>
+    quoteHistory?.length ? 18 + (index * (chartWidth - 36)) / quoteHistory.length : 18;
+  const priceY = (value: number) =>
+    priceSpan <= 0 ? candleBottom : candleBottom - ((value - priceRange.low) / priceSpan) * (candleBottom - priceTop);
+  const candlePlot = (index: number, bar: SourceHistoryBar) => {
+    const x = candleX(index);
+    const bodyTop = priceY(Math.max(Number(bar.open), Number(bar.close)));
+    const bodyBottom = priceY(Math.min(Number(bar.open), Number(bar.close)));
+    const up = Number(bar.close) >= Number(bar.open);
+    return {
+      x,
+      up,
+      bodyY: bodyTop,
+      bodyHeight: Math.max(bodyBottom - bodyTop, 1),
+    };
+  };
 
   const chooseStock = useCallback(
     (choice: StockChoice) => {
@@ -440,9 +483,9 @@ function App() {
 
   useEffect(() => {
     if (quote && !quoteHistory && !historyLoading) {
-      void readSourceHistory(5);
+      void readSourceHistory(historyDays);
     }
-  }, [quote, quoteHistory, readSourceHistory, historyLoading]);
+  }, [quote, quoteHistory, readSourceHistory, historyDays, historyLoading]);
 
   const evaluate = useCallback(async () => {
     const isActive = activeMarket.market === "A_SHARE";
@@ -1091,15 +1134,8 @@ function App() {
                       <small>{quote.trading_currency}</small>
                     </div>
                     <div>
-                      <span>开盘价差</span>
-                      <strong>
-                        {(
-                          ((Number(quote.close) - Number(quote.open)) /
-                            Number(quote.open)) *
-                          100
-                        ).toFixed(2)}
-                        %
-                      </strong>
+                      <span>日内涨跌</span>
+                      <strong>{(((Number(quote.close) - Number(quote.open)) / Number(quote.open)) * 100).toFixed(2)}%</strong>
                       <small>{quote.provider}</small>
                     </div>
                   </div>
@@ -1159,39 +1195,56 @@ function App() {
                   <div className="history-periods">
                     <button
                       data-testid="history-period-5d"
-                      className="history-period"
+                      className={`history-period${historyDays === 5 ? " active" : ""}`}
                       type="button"
-                      onClick={() => void readSourceHistory(5)}
+                      onClick={() => {
+                        setHistoryDays(5);
+                        void readSourceHistory(5);
+                      }}
                     >
                       5D
                     </button>
                     <button
                       data-testid="history-period-30d"
-                      className="history-period"
+                      className={`history-period${historyDays === 30 ? " active" : ""}`}
                       type="button"
-                      onClick={() => void readSourceHistory(30)}
+                      onClick={() => {
+                        setHistoryDays(30);
+                        void readSourceHistory(30);
+                      }}
                     >
                       30D
                     </button>
                     <button
                       data-testid="history-period-60d"
-                      className="history-period"
+                      className={`history-period${historyDays === 60 ? " active" : ""}`}
                       type="button"
-                      onClick={() => void readSourceHistory(60)}
+                      onClick={() => {
+                        setHistoryDays(60);
+                        void readSourceHistory(60);
+                      }}
                     >
                       60D
                     </button>
                     <button
                       data-testid="history-period-120d"
-                      className="history-period"
+                      className={`history-period${historyDays === 120 ? " active" : ""}`}
                       type="button"
-                      onClick={() => void readSourceHistory(120)}
+                      onClick={() => {
+                        setHistoryDays(120);
+                        void readSourceHistory(120);
+                      }}
                     >
                       120D
                     </button>
                   </div>
-                  <button className="primary-button" type="button" onClick={() => void readSourceHistory(5)}>
-                    读取 K线
+                  <button
+                    className="primary-button"
+                    type="button"
+                    onClick={() => void readSourceHistory(historyDays)}
+                    disabled={historyLoading}
+                  >
+                    {historyLoading ? "读取中…" : "重新读取"}
                   </button>
                 </div>
                 {historyError && <pre className="error-banner">{historyError}</pre>}
@@ -1208,37 +1261,91 @@ function App() {
                   </div>
                 )}
                 {quoteHistory && quoteHistory.length > 0 ? (
-                  <div className="quote-history-grid">
-                    {quoteHistory.map((bar) => (
-                      <article className="history-bar" key={bar.trading_date}>
-                        <div className="history-bar-head">
-                          <span>{bar.trading_date}</span>
-                          <strong>{quoteNumber(bar.close)}</strong>
-                        </div>
-                        <dl className="history-facts">
-                          <div>
-                            <dt>开</dt>
-                            <dd>{quoteNumber(bar.open)}</dd>
+                  <>
+                    <div className="kline-summary">
+                      <div>
+                        <span>区间涨跌</span>
+                        <strong>{Number.isFinite(windowChange) ? `${windowChange.toFixed(2)}%` : "—"}</strong>
+                      </div>
+                      <div>
+                        <span>区间最高</span>
+                        <strong>{quoteNumber(String(priceRange.high))}</strong>
+                      </div>
+                      <div>
+                        <span>区间最低</span>
+                        <strong>{quoteNumber(String(priceRange.low))}</strong>
+                      </div>
+                      <div>
+                        <span>峰值成交量</span>
+                        <strong>{quoteNumber(String(volumePeak))}</strong>
+                      </div>
+                      <div>
+                        <span>供给</span>
+                        <strong>{latestBar?.provider ?? "—"}</strong>
+                      </div>
+                    </div>
+                    <figure className="kline-chart" data-testid="kline-chart">
+                      <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} role="img" aria-label={`${symbol} 历史日 K 线图`}>
+                        {[0.2, 0.5, 0.8].map((ratio) => (
+                          <line
+                            key={ratio}
+                            x1="18"
+                            x2={chartWidth - 18}
+                            y1={priceTop + (candleBottom - priceTop) * ratio}
+                            y2={priceTop + (candleBottom - priceTop) * ratio}
+                          />
+                        ))}
+                        {quoteHistory.map((bar, index) => {
+                          const plot = candlePlot(index, bar);
+                          const volumeHeight = Number(bar.volume) > 0 ? Math.max((Number(bar.volume) / volumePeak) * 52, 2) : 0;
+                          return (
+                            <g key={bar.trading_date} className={plot.up ? "bar-up" : "bar-down"}>
+                              <title>
+                                {`${bar.trading_date} O:${bar.open} H:${bar.high} L:${bar.low} C:${bar.close} V:${bar.volume}`}
+                              </title>
+                              <line x1={plot.x} x2={plot.x} y1={priceY(Number(bar.high))} y2={priceY(Number(bar.low))} strokeWidth={3} />
+                              <rect x={plot.x - 5} y={plot.bodyY} width={10} height={plot.bodyHeight} rx={2} />
+                              {volumeHeight > 0 && (
+                                <rect
+                                  className="volume-bar"
+                                  x={plot.x - 5}
+                                  y={volumeBottom - volumeHeight}
+                                  width={10}
+                                  height={volumeHeight}
+                                  rx={2}
+                                />
+                              )}
+                            </g>
+                          );
+                        })}
+                        <text x={chartWidth - 18} y={priceY(priceRange.high) - 7} textAnchor="end">{quoteNumber(String(priceRange.high))}</text>
+                        <text x={chartWidth - 18} y={candleBottom + 15} textAnchor="end">{quoteNumber(String(priceRange.low))}</text>
+                        <text x="18" y={chartHeight - 5}>
+                          {quoteHistory[0]?.trading_date} — {latestBar?.trading_date}
+                        </text>
+                      </svg>
+                      <figcaption>
+                        真实日线 · {latestBar?.provider ?? "未返回供给"} · {quoteHistory.length} 根K线
+                      </figcaption>
+                    </figure>
+                    <div className="quote-history-grid">
+                      {[...quoteHistory].reverse().slice(0, 12).map((bar) => (
+                        <article className="history-bar" key={bar.trading_date}>
+                          <div className="history-bar-head">
+                            <span>{bar.trading_date}</span>
+                            <strong>{quoteNumber(bar.close)}</strong>
                           </div>
-                          <div>
-                            <dt>高</dt>
-                            <dd>{quoteNumber(bar.high)}</dd>
-                          </div>
-                          <div>
-                            <dt>低</dt>
-                            <dd>{quoteNumber(bar.low)}</dd>
-                          </div>
-                          <div>
-                            <dt>量</dt>
-                            <dd>{quoteNumber(bar.volume)}</dd>
-                          </div>
-                        </dl>
-                        <small>
-                          {bar.provider} · {bar.trading_currency}
-                        </small>
-                      </article>
-                    ))}
-                  </div>
+                          <dl className="history-facts">
+                            <div><dt>开</dt><dd>{quoteNumber(bar.open)}</dd></div>
+                            <div><dt>高</dt><dd>{quoteNumber(bar.high)}</dd></div>
+                            <div><dt>低</dt><dd>{quoteNumber(bar.low)}</dd></div>
+                            <div><dt>量</dt><dd>{quoteNumber(bar.volume)}</dd></div>
+                          </dl>
+                          <small>{bar.trading_currency}</small>
+                        </article>
+                      ))}
+                    </div>
+                  </>
                 ) : (
                   <div className={`quote-history-empty ${historyError ? "failed" : ""}`}>
                     <strong>{historyLoading ? "正在读取历史" : "暂无历史数据"}</strong>

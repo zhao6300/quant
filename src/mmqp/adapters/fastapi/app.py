@@ -833,8 +833,8 @@ def get_source_history(
             exchange=exchange,
             canonical_asset_id=f"ASSET-{source_id}:{symbol}",
             provider_code=symbol,
-            start_date=trading_date - timedelta(days=29),
             end_date=trading_date,
+            start_date=trading_date - timedelta(days=max(limit - 1, 0)),
             limit=limit,
         )
     )

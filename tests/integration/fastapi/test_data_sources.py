@@ -159,13 +159,15 @@ def test_source_history_endpoint_exposes_multiple_daily_bars() -> None:
             assert command.source_id == "stooq"
             assert command.provider_code == "AAPL"
             assert command.limit == 2
+            assert command.start_date == date(2026, 9, 13)
+            assert command.end_date == date(2026, 9, 14)
             return _FakeHistoryPreview(
                 source_id=command.source_id,
                 market=command.market,
                 exchange=command.exchange,
                 canonical_asset_id=command.canonical_asset_id,
                 provider_code=command.provider_code,
-                observations=(
+        observations=(
                     DailyBar(
                         canonical_asset_id=command.canonical_asset_id,
                         provider_code=command.provider_code,

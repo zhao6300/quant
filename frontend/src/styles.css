@@ -1088,6 +1088,92 @@ select:focus {
 .quote-history-head strong {
   font-size: 18px;
 }
+.history-periods {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+.history-period {
+  border: 1px solid rgba(15, 18, 23, 0.08);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.58);
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 640;
+  padding: 8px 13px;
+  cursor: pointer;
+}
+.history-period.active {
+  border-color: rgba(109, 163, 255, 0.45);
+  background: rgba(109, 163, 255, 0.14);
+  color: #245a99;
+}
+.kline-summary {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 11px;
+  margin: 15px 0;
+}
+.kline-summary > div {
+  min-width: 0;
+  padding: 15px;
+  border-radius: 17px;
+  border: 1px solid rgba(15, 18, 23, 0.07);
+  background: rgba(255, 255, 255, 0.58);
+}
+.kline-summary span {
+  display: block;
+  color: var(--muted);
+  font-size: 11.5px;
+}
+.kline-summary strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 18px;
+  letter-spacing: -0.03em;
+  overflow-wrap: anywhere;
+}
+.kline-chart {
+  margin: 0;
+  padding: 16px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+}
+.kline-chart svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.kline-chart svg text,
+.kline-chart figcaption {
+  fill: var(--muted);
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 12.5px;
+}
+.kline-chart svg line {
+  stroke: rgba(15, 18, 23, 0.1);
+}
+.kline-chart svg text:first-of-type {
+  text-anchor: end;
+}
+.bar-up rect,
+.bar-up line {
+  fill: #1b8a4f;
+  stroke: #1b8a4f;
+}
+.bar-down rect,
+.bar-down line {
+  fill: #b44039;
+  stroke: #b44039;
+}
+.bar-up .volume-bar,
+.bar-down .volume-bar {
+  opacity: 0.52;
+}
 .quote-history-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1268,4 +1354,10 @@ select:focus {
   .quote-history-grid {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+.history-period {
+  white-space: nowrap;
+}
+.kline-chart svg text {
+  text-anchor: end;
 }

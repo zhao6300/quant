@@ -73,6 +73,7 @@ export class ApiClient {
       exchange: string;
       symbol: string;
       trading_date: string;
+      limit: string;
     },
   ): Promise<SourceHistory> {
     const query = new URLSearchParams(payload);
