@@ -2,9 +2,11 @@ from __future__ import annotations
 
 from datetime import date
 from decimal import Decimal
+import pytest
 
 from mmqp.adapters.data_connectors.http import HTTPTransport
 from mmqp.adapters.data_connectors.stooq import StooqDailyBarConnector
+from mmqp.domain.providers import ProviderCategorizedError
 
 
 class _FakeResponse:
@@ -51,3 +53,19 @@ def test_stooq_connector_parses_a_single_daily_csv_row() -> None:
     assert observation.trading_date == date(2025, 1, 2)
     assert observation.trading_currency == "USD"
     assert observation.provenance_id != ""
+
+
+def test_stooq_connector_categorizes_a_bad_payload() -> None:
+    def urlopen(_: str, __: float) -> _FakeResponse:
+        return _FakeResponse(
+            '<html><body>stooq.com requires JavaScript</body></html>'.encode("utf-8"),
+        )
+
+    with pytest.raises(ProviderCategorizedError) as error:
+        StooqDailyBarConnector(transport=HTTPTransport(urlopen)).fetch(
+            provider_code="600000.ss",
+            trading_date=date(2025, 1, 2),
+        )
+
+    assert error.value.category == "invalid_response"
+    assert error.value.problem.status == 502

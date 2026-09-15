@@ -36,7 +36,10 @@ class StooqDailyBarConnector(DailyBarConnector):
             f"&d2={trading_date.isoformat()}&i=d"
         )
         payload = self.transport.text(endpoint)
-        rows = list(csv.DictReader(io.StringIO(payload), strict=True))
+        try:
+            rows = list(csv.DictReader(io.StringIO(payload), strict=True))
+        except (csv.Error, UnicodeError) as error:
+            raise _invalid_response("csv") from error
         selected = [row for row in rows if row.get("Date") == trading_date.isoformat()]
         if not selected:
             raise _invalid_response("missing-date")

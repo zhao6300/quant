@@ -195,9 +195,11 @@ function App() {
   const [quote, setQuote] = useState<SourceTicker | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
   const [quoteError, setQuoteError] = useState<string | null>(null);
+  const [quoteFallback, setQuoteFallback] = useState<string | null>(null);
   const [quoteHistory, setQuoteHistory] = useState<SourceHistoryBar[] | null>(null);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState<string | null>(null);
+  const [historyFallback, setHistoryFallback] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -220,6 +222,9 @@ function App() {
       setSymbol(defaultMarketSymbol(selectedMarketId));
       setQuote(null);
       setQuoteError(null);
+      setQuoteFallback(null);
+      setQuoteHistory(null);
+      setHistoryFallback(null);
       setActivePageId("quote");
     },
     [selectedMarketId],
@@ -233,15 +238,33 @@ function App() {
       setHistoryLoading(true);
       setHistoryError(null);
       setQuoteHistory(null);
+      setHistoryFallback(null);
+      let fallbackNote: string | null = null;
       try {
-        const result = await client.sourceHistory(activeSourceId, {
-          market: activeMarket.market,
-          exchange: activeMarket.exchange,
-          symbol,
-          trading_date: quoteDate,
-        });
-        setQuoteHistory(result.bars);
-        setHistoryError(null);
+        try {
+          const result = await client.sourceHistory(activeSourceId, {
+            market: activeMarket.market,
+            exchange: activeMarket.exchange,
+            symbol,
+            trading_date: quoteDate,
+          });
+          setQuoteHistory(result.bars);
+          setHistoryError(null);
+        } catch (primaryError) {
+          if (activeSourceId === "yahoo-finance") {
+            throw primaryError;
+          }
+          fallbackNote = "Yahoo Finance";
+          const fallback = await client.sourceHistory("yahoo-finance", {
+            market: activeMarket.market,
+            exchange: activeMarket.exchange,
+            symbol,
+            trading_date: quoteDate,
+          });
+          setQuoteHistory(fallback.bars);
+          setHistoryError(null);
+          setHistoryFallback(fallbackNote);
+        }
       } catch (error) {
         setQuoteHistory(null);
         setHistoryError(error instanceof Error ? error.message : "读取历史失败。");
@@ -266,6 +289,7 @@ function App() {
     }
     setQuote(null);
     setQuoteError(null);
+    setQuoteFallback(null);
     setQuoteLoading(true);
     try {
       const quotation = await client.sourceQuote(
@@ -281,8 +305,27 @@ function App() {
       setSelectedProvider(selectedProvider ?? activeSourceId);
       setQuoteError(null);
     } catch (error) {
-      setQuote(null);
-      setQuoteError(error instanceof Error ? error.message : "读取行情失败。");
+      if (selectedProvider && selectedProvider !== "yahoo-finance") {
+        try {
+          const fallback = await client.sourceQuote("yahoo-finance", {
+            market: activeMarket.market,
+            exchange: activeMarket.exchange,
+            symbol,
+            trading_date: quoteDate,
+          });
+          setQuote(fallback);
+          setQuoteFallback("Yahoo Finance");
+          setQuoteError(null);
+        } catch (fallbackError) {
+          setQuote(null);
+          setQuoteError(
+            fallbackError instanceof Error ? fallbackError.message : "读取行情失败。",
+          );
+        }
+      } else {
+        setQuote(null);
+        setQuoteError(error instanceof Error ? error.message : "读取行情失败。");
+      }
     } finally {
       setQuoteLoading(false);
     }
@@ -910,8 +953,14 @@ function App() {
                         : "等待连接"}
                 </div>
               </div>
-              {quoteError && <pre className="error-banner">{quoteError}</pre>}
-              {quote ? (
+                  {quoteError && <pre className="error-banner">{quoteError}</pre>}
+                  {quoteFallback && (
+                    <div className="quote-note">
+                      <strong>行情回退</strong>
+                      <span>已使用 Yahoo Finance 提供快照。</span>
+                    </div>
+                  )}
+                  {quote ? (
                 <div className="quote-stage-body" data-testid="quote-result">
                   <div className="quote-hero">
                     <div>
@@ -1024,6 +1073,12 @@ function App() {
                   </button>
                 </div>
                 {historyError && <pre className="error-banner">{historyError}</pre>}
+                {historyFallback && (
+                  <div className="quote-note">
+                    <strong>历史回退</strong>
+                    <span>已使用 Yahoo Finance 提供所选窗口。</span>
+                  </div>
+                )}
                 {quoteHistory && quoteHistory.length > 0 ? (
                   <div className="quote-history-grid">
                     {quoteHistory.map((bar) => (
